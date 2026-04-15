@@ -1,0 +1,125 @@
+:root {
+  /* Brighter Retro Palette */
+  --retro-walnut: #b79876; 
+  --retro-olive: #b79876;
+  --retro-cream: #b79876;
+  --room-depth: 1200px; 
+}
+
+.room-stage {
+  width: 100vw;
+  height: 100vh;
+  background-color: #3d1b11; /* Dark gray instead of black so we can see edges */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  perspective: 1500px;
+  /* Shifting eye level up makes the floor look huge */
+  perspective-origin: 50% 30%; 
+}
+
+.retro-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  /* Reduced opacity so it doesn't black out the room */
+  background: radial-gradient(circle at 50% 30%, transparent 40%, rgba(0,0,0,0.6) 100%);
+  opacity: 0.5;
+}
+
+.room-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+.wall, .floor, .ceiling {
+  position: absolute;
+  /* REMOVE BORDER LATER - for debugging only */
+  /* border: 1px solid rgba(255,255,255,0.1);  */
+}
+
+/* --- THE BACK WALL --- */
+.back-wall {
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--retro-cream);
+  /* Pushing it back slightly less to ensure it renders */
+  transform: translateZ(calc(var(--room-depth) * -1));
+  box-shadow: inset 0 0 100px rgba(0,0,0,0.2);
+   background-image: 
+    url("https://transparenttextures.com/patterns/kinda-jean.png");
+}
+
+/* --- THE HUGE FLOOR --- */
+.floor {
+  width: 100vw;
+  height: var(--room-depth);
+  bottom: 0;
+  transform-origin: bottom;
+  transform: rotateX(90deg);
+  background: #2b1a12;
+  opacity: 20%;
+  background-image: 
+    linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 90%),
+    url("https://transparenttextures.com/patterns/tileable-wood-colored.png");
+}
+
+.floor-texture {
+  width: 100%;
+  height: 100%;
+  background-image: 
+    /* linear-gradient(to top, rgba(0,0,0,0.1) 0%, transparent 60%), */
+    url('https://www.transparenttextures.com/patterns/wood-pattern.png');
+  background-size: 300px;
+}
+
+/* --- THE SMALL CEILING --- */
+.ceiling {
+  width: 100vw;
+  height: var(--room-depth);
+  top: 0;
+  transform-origin: top;
+  transform: rotateX(-90deg);
+  background: #e0b78c;
+}
+
+/* --- SIDE WALLS --- */
+.left-wall {
+  width: var(--room-depth);
+  height: 100vh;
+  left: 0;
+  transform-origin: left;
+  transform: rotateY(90deg);
+  opacity: 90%;
+  background-image: 
+    url("https://transparenttextures.com/patterns/kinda-jean.png");
+  background: linear-gradient(to right, rgba(0,0,0,0.1), transparent),
+              var(--retro-walnut);
+        
+}
+
+.right-wall {
+  width: var(--room-depth);
+  height: 100vh;
+  right: 0;
+  transform-origin: right;
+  transform: rotateY(-90deg);
+  background-image: 
+    url("https://transparenttextures.com/patterns/kinda-jean.png");
+  background: linear-gradient(to left, rgba(0,0,0,0.1), transparent),
+              var(--retro-olive);
+
+}
+
+.ambient-glow {
+  position: absolute;
+  top: 20%;
+  width: 100%;
+  height: 60%;
+  background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 80%);
+  filter: blur(40px);
+}

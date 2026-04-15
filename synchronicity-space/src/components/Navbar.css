@@ -1,0 +1,34 @@
+.logo {
+    font-family: "Slackey", sans-serif;
+    font-size: 2.5vw;
+    color: #C2BABA;
+    text-align:start;
+    line-height: 0.9;
+    letter-spacing: 0%;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+
+    padding: 1rem 3rem;
+    width: 100%;
+
+    box-sizing: border-box;
+    position: fixed; 
+    left: 0;
+    font-family: 'Overpass', sans-serif;
+}
+
+.nav-links {
+    display: flex;
+    gap: 2vw;
+    
+}
+
+.nav-item {
+    background: none;
+    border: none;
+    text-decoration: none;
+    color: #C2BABA;
+}
