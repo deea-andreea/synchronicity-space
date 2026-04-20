@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./HomePage.css";
 import type { Album } from "../models/Album";
 import { useSpotify } from "./Spotify"; // Your context hook
@@ -7,8 +7,9 @@ import type { Note } from "../models/Note";
 import { mockNotes } from "../data/mockNotes";
 import { mockUsers } from "../data/mockUsers";
 import { trackListening, updateNoteCount } from "../utils/tracking";
+import { useNoteSocket } from "../hooks/useNoteSocket";
 
-import { fetchNotes, createNote, updateNote, deleteNote, type PaginatedNotes } from "../api/notesApi"
+import { fetchNotes, createNote, updateNote, deleteNote, type PaginatedNotes, syncOfflineQueue, isServerReachable } from "../api/notesApi"
 
 interface HomeProps {
   albums: Album[];
@@ -64,6 +65,63 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
     }
   };
 
+  const [isOffline, setIsOffline] = useState(false);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  };
+
+  const handleBackOnline = async () => {
+    stopPolling();
+    setIsOffline(false);
+    setFetchError("");
+
+    pageCacheRef.current = {};
+
+    await syncOfflineQueue();
+
+    if (currentTrackId && playingAlbum) {
+      fetchNotes({
+        trackId: currentTrackId,
+        albumId: playingAlbum.id,
+        page: notePage,
+        pageSize: notesPerPage,
+      }).then((data) => {
+        pageCacheRef.current[notePage] = data.items;
+        setDisplayNotes(data.items);
+        setTotalPages(data.totalPages);
+      });
+    }
+  };
+
+  const startPolling = () => {
+    if (pollingRef.current) return; // already polling
+    pollingRef.current = setInterval(async () => {
+      const reachable = await isServerReachable();
+      if (reachable) {
+        await handleBackOnline();
+      }
+    }, 3000); // check every 3 seconds
+  };
+
+  // Keep the browser-level offline/online events for airplane-mode style changes
+  useEffect(() => {
+    window.addEventListener("offline", () => {
+      setIsOffline(true);
+      startPolling();
+    });
+    window.addEventListener("online", () => {
+      // Browser thinks it's online but server might still be down — start polling
+      startPolling();
+    });
+    return () => stopPolling();
+  }, []);
+
+
   const [displayNotes, setDisplayNotes] = useState<Note[]>([]);
   const [notePage, setNotePage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -72,27 +130,39 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
   const [fetchError, setFetchError] = useState("");
 
   const currentTrackId = playingAlbum?.tracks[currentTrackIndex]?.id;
+  const pageCacheRef = useRef<Record<number, Note[]>>({});
 
   useEffect(() => {
     if (!currentTrackId || !playingAlbum) {
       setDisplayNotes([]);
-      console.log("here");
       return;
     }
-
 
     setFetchError("");
     fetchNotes({
       trackId: currentTrackId,
       albumId: playingAlbum.id,
       page: notePage,
-      pageSize: notesPerPage
+      pageSize: notesPerPage,
     })
       .then((data: PaginatedNotes) => {
+        pageCacheRef.current[notePage] = data.items;  // ← cache it
         setDisplayNotes(data.items);
         setTotalPages(data.totalPages);
+        setFetchError("");
       })
-      .catch(() => setFetchError("Could not load notes from server"));
+      .catch(() => {
+        setFetchError("Could not load notes. Server may be unreachable.");
+        setIsOffline(true);
+        startPolling();
+
+        // ← Fall back to cache if available
+        const cached = pageCacheRef.current[notePage];
+        if (cached) {
+          setDisplayNotes(cached);
+        }
+        // If no cache for this page, displayNotes stays as-is (don't wipe it)
+      });
   }, [currentTrackId, notePage]);
 
   useEffect(() => {
@@ -121,7 +191,11 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
         albumId: playingAlbum.id,
         text: newNoteText,
       });
-      setDisplayNotes((prev) => [created, ...prev]);
+      setDisplayNotes(prev => {
+        const updated = [created, ...prev];
+        pageCacheRef.current[notePage] = updated;  // ← keep cache in sync
+        return updated;
+      })
       setNewNoteText("");
       updateNoteCount(1);
     }
@@ -129,6 +203,20 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
       setNoteError(err.message ?? "Something went wrong posting the note.");
     }
   }
+
+  useEffect(() => {
+    const handleOnline = async () => {
+      setFetchError("");
+      await syncOfflineQueue();
+      if (currentTrackId && playingAlbum) {
+        fetchNotes({ trackId: currentTrackId, albumId: playingAlbum.id, page: notePage, pageSize: notesPerPage })
+          .then(data => { setDisplayNotes(data.items); setTotalPages(data.totalPages); });
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, [currentTrackId, notePage]);
 
   const getUserById = (id: string) => mockUsers.find((u) => u.id === id);
   const currentUser = mockUsers.find((u) => u.id === "1") || mockUsers[0];
@@ -181,6 +269,27 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
       setNoteError(err.message ?? "Could not save note.");
     }
   };
+
+  const [simulating, setSimulating] = useState(false);
+
+  const runSimulation = async () => {
+    setSimulating(true);
+    await fetch("http://localhost:3000/generator/start", { method: "POST" });
+
+    setTimeout(async () => {
+      await fetch("http://localhost:3000/generator/stop", { method: "POST" });
+      setSimulating(false);
+    }, 10000);
+  };
+
+  useNoteSocket((newNotes) => {
+    const relevant = newNotes.filter(n => n.trackId === currentTrackId);
+    if (relevant.length > 0) {
+      setDisplayNotes(prev => [...relevant, ...prev]);
+    }
+  });
+
+  
 
   useEffect(() => {
     if (activeAlbum) {
@@ -303,18 +412,22 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
                     <h2 className="overlay-title">Notes on {playingAlbum?.tracks[currentTrackIndex]?.title}</h2>
                     <div className="notes-list">
                       {fetchError && <p className="error-text">{fetchError}</p>}
+                      {isOffline && (
+                        <div className="offline-banner">
+                          You're offline — changes will sync when you reconnect
+                        </div>
+                      )}
                       {!fetchError && displayNotes.length === 0 && (
                         <p className="empty-text">No notes yet. Be the first!</p>
                       )}
- 
+
                       {displayNotes.map((note) => {
                         const user = getUserById(note.userId);
                         return (
                           <div
                             key={note.id}
-                            className={`note-entry ${user?.id === "1" ? "is-me" : ""} ${
-                              selectedNote?.id === note.id ? "active-note" : ""
-                            }`}
+                            className={`note-entry ${user?.id === "1" ? "is-me" : ""} ${selectedNote?.id === note.id ? "active-note" : ""
+                              }`}
                             onClick={() => setSelectedNote(note)}
                           >
                             <div className="note-body">
@@ -345,7 +458,15 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
                           {">"}
                         </button>
                       </div>
+
                     )}
+                    <button
+                      className="action-btn"
+                      onClick={runSimulation}
+                      disabled={simulating}
+                    >
+                      {simulating ? "Simulating..." : "Simulate notes"}
+                    </button>
                     <div className="add-note-container">
                       <textarea
                         className="note-input"
