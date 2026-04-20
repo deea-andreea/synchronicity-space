@@ -28,6 +28,7 @@ export async function fetchNotes(params: {
   if (params.pageSize) query.set("pageSize", String(params.pageSize));
 
   const res = await fetch(`${BASE_URL}/notes?${query}`);
+  console.log(res);
 
   if (!res.ok) throw new Error("Failed to fetch notes");
   return res.json();

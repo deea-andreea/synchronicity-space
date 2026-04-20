@@ -23,6 +23,8 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
   const [showOverlay, setShowOverlay] = useState(false);
   const [noteError, setNoteError] = useState("");
 
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
 
   // const { player, deviceId } = useSpotify();
   const player = null;
@@ -105,17 +107,15 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
       if (reachable) {
         await handleBackOnline();
       }
-    }, 3000); // check every 3 seconds
+    }, 3000);
   };
 
-  // Keep the browser-level offline/online events for airplane-mode style changes
   useEffect(() => {
     window.addEventListener("offline", () => {
       setIsOffline(true);
       startPolling();
     });
     window.addEventListener("online", () => {
-      // Browser thinks it's online but server might still be down — start polling
       startPolling();
     });
     return () => stopPolling();
@@ -125,6 +125,9 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
   const [displayNotes, setDisplayNotes] = useState<Note[]>([]);
   const [notePage, setNotePage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const prefetchRef = useRef<PaginatedNotes | null>(null);
   const notesPerPage = 2;
 
   const [fetchError, setFetchError] = useState("");
@@ -138,36 +141,59 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
       return;
     }
 
-    setFetchError("");
-    fetchNotes({
-      trackId: currentTrackId,
-      albumId: playingAlbum.id,
-      page: notePage,
-      pageSize: notesPerPage,
-    })
-      .then((data: PaginatedNotes) => {
-        pageCacheRef.current[notePage] = data.items;  // ← cache it
-        setDisplayNotes(data.items);
+    // Page 1 is a fresh load — reset everything
+    if (notePage === 1) {
+      setDisplayNotes([]);
+      prefetchRef.current = null;
+      setHasMore(true);
+    }
+
+    setIsLoadingMore(true);
+
+    const loadPage = async () => {
+      try {
+        let data: PaginatedNotes;
+
+        if (prefetchRef.current) {
+          data = prefetchRef.current;
+          prefetchRef.current = null;
+        } else {
+          data = await fetchNotes({
+            trackId: currentTrackId,
+            albumId: playingAlbum.id,
+            page: notePage,
+            pageSize: notesPerPage,
+          });
+        }
+
+        setDisplayNotes(prev => notePage === 1 ? data.items : [...prev, ...data.items]);
         setTotalPages(data.totalPages);
-        setFetchError("");
-      })
-      .catch(() => {
-        setFetchError("Could not load notes. Server may be unreachable.");
+        setHasMore(notePage < data.totalPages);
+
+        // Prefetch the next page silently
+        if (notePage < data.totalPages) {
+          fetchNotes({
+            trackId: currentTrackId,
+            albumId: playingAlbum.id,
+            page: notePage + 1,
+            pageSize: notesPerPage,
+          }).then(nextData => {
+            prefetchRef.current = nextData;
+          }).catch(() => { }); // silently ignore prefetch failures
+        }
+      } catch {
+        setFetchError("Could not load notes.");
         setIsOffline(true);
         startPolling();
-
-        // ← Fall back to cache if available
         const cached = pageCacheRef.current[notePage];
-        if (cached) {
-          setDisplayNotes(cached);
-        }
-        // If no cache for this page, displayNotes stays as-is (don't wipe it)
-      });
-  }, [currentTrackId, notePage]);
+        if (cached) setDisplayNotes(prev => [...prev, ...cached]);
+      } finally {
+        setIsLoadingMore(false);
+      }
+    };
 
-  useEffect(() => {
-    setNotePage(1);
-  }, [currentTrackId]);
+    loadPage();
+  }, [currentTrackId, notePage]);
 
   const [newNoteText, setNewNoteText] = useState("");
 
@@ -203,6 +229,39 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
       setNoteError(err.message ?? "Something went wrong posting the note.");
     }
   }
+
+  const listRef = useRef<HTMLDivElement>(null); 
+  useEffect(() => {
+  const list = listRef.current;
+  if (!list) return;
+  console.log("scrollHeight:", list.scrollHeight, "clientHeight:", list.clientHeight);
+}, [displayNotes]);
+ 
+  useEffect(() => {
+  const list = listRef.current;
+  if (!list || !showOverlay) return;
+
+  const handleScroll = () => {
+    const { scrollTop, scrollHeight, clientHeight } = list;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    
+    console.log("scroll:", scrollTop, "distanceFromBottom:", distanceFromBottom);
+    
+    if (distanceFromBottom < 20 && hasMore && !isLoadingMore) {
+      setNotePage(prev => prev + 1);
+    }
+  };
+
+  list.addEventListener("scroll", handleScroll);
+  return () => list.removeEventListener("scroll", handleScroll);
+}, [hasMore, isLoadingMore, showOverlay]);
+
+  useEffect(() => {
+    setNotePage(1);
+    prefetchRef.current = null;
+    pageCacheRef.current = {};
+  }, [currentTrackId]);
+
 
   useEffect(() => {
     const handleOnline = async () => {
@@ -289,7 +348,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
     }
   });
 
-  
+
 
   useEffect(() => {
     if (activeAlbum) {
@@ -410,7 +469,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
                   <button className="close-button-note" onClick={closeNotes}>X</button>
                   <div className="detail-content-note">
                     <h2 className="overlay-title">Notes on {playingAlbum?.tracks[currentTrackIndex]?.title}</h2>
-                    <div className="notes-list">
+                    <div className="notes-list" ref={listRef}>
                       {fetchError && <p className="error-text">{fetchError}</p>}
                       {isOffline && (
                         <div className="offline-banner">
@@ -437,29 +496,11 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
                           </div>
                         );
                       })}
-                    </div>
-                    {totalPages > 1 && (
-                      <div className="note-pagination">
-                        <button
-                          disabled={notePage === 1}
-                          onClick={() => setNotePage((prev) => prev - 1)}
-                          className="page-arrow"
-                        >
-                          {"<"}
-                        </button>
-                        <span className="page-indicator">
-                          {notePage} / {totalPages}
-                        </span>
-                        <button
-                          disabled={notePage >= totalPages}
-                          onClick={() => setNotePage((prev) => prev + 1)}
-                          className="page-arrow"
-                        >
-                          {">"}
-                        </button>
-                      </div>
 
-                    )}
+                      {isLoadingMore && <p className="loading-text">Loading more...</p>}
+                      {!hasMore && displayNotes.length > 0 && <p className="empty-text">— end —</p>}
+                      <div ref={sentinelRef} style={{ height: "1px" }} />
+                    </div>
                     <button
                       className="action-btn"
                       onClick={runSimulation}
