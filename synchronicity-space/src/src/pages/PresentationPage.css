@@ -1,0 +1,60 @@
+.landing-wrapper {
+  position: relative;
+  color: white;
+  overflow: hidden;
+  margin-top: 120px;
+}
+
+
+.landing-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+}
+
+.logo-text { font-size: 10rem; letter-spacing: 2px; }
+
+.landing-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  padding: 0 8vw;
+  margin-right:80px;
+}
+
+.vinyl-section { flex: 1; display: flex; justify-content: center; }
+
+.spinning-vinyl {
+  width: 35vw;
+  animation: spin 15s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+
+.headline h2 { font-size: 3.5vw; margin: 0; font-weight: 400; }
+.headline .italic { font-style: italic; }
+
+.description {  color: #ccc; line-height: 1.6; padding-top: 10px; font-size: 1vw;}
+
+.cta-buttons { display: flex; flex-direction: column; gap: 15px; padding:3vw }
+
+.btn {
+  padding: 12px;
+  text-align: center;
+  text-decoration: none;
+  color: white;
+  border-radius: 4px;
+  transition: 0.3s;
+}
+
+.btn-red { background: #3d0000; border: 1px solid #5e0000; }
+.btn-red:hover { background: #5e0000; }
+
+.btn-outline { border: 1px solid #333; }
+.btn-outline:hover { border-color: #666; }

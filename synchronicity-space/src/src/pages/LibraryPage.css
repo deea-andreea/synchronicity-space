@@ -1,0 +1,229 @@
+.library-container {
+    margin-top:120px;
+}
+
+.library-text {
+    height:50px;
+    margin-bottom: 1.5rem;
+}
+
+
+.master-view {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.nav-arrow {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 20px;
+    height: 300px;
+    display: flex;
+    align-items: center;
+    transition: transform 0.2s ease;
+}
+
+.nav-arrow svg {
+    width: 40px;
+    fill: #C2BABA; 
+    opacity: 0.5;
+    transition: all 0.3s ease;
+}
+
+.nav-arrow:hover:not(:disabled) svg {
+    fill: #fff;
+    opacity: 1;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+}
+
+.nav-arrow:disabled svg {
+    opacity: 0.05;
+    cursor: default;
+}
+.album-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); 
+    /* grid-template-rows: repeat(2, auto);  */
+    
+    gap: 40px;
+    padding: 20px 40px;
+    
+    overflow: hidden; 
+}
+
+@media (max-width: 1199px) {
+  .album-grid { grid-template-columns: repeat(3, 1fr); } 
+}
+
+@media (max-width: 767px) {
+  .album-grid { grid-template-columns: 1fr; }
+}
+
+.album-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;  
+    text-align: center; 
+}
+
+.album-card img {
+    width: 100%;
+    max-width: 150px;      
+    object-fit: cover;
+}
+
+.album-image {
+    position: relative;
+    width: 200px;
+    height: 160px;
+}
+
+.album-image img:nth-child(1) {
+    position: absolute;
+    z-index: 1;
+    right: -20px;
+    object-fit: contain;
+}
+
+.album-image img:nth-child(2) {
+    position: absolute;
+    z-index: 2; 
+    top: 0;
+    left: 0;    
+    object-fit: cover;
+}
+
+.album-card-text {
+    line-height: 20px;
+}
+.album-card-text h3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;  
+    overflow: hidden;
+}
+
+.button-text {
+    background: none;
+    border:none;
+    font-family: 'Slackey', sans-serif;
+    font-size: 40px;
+    line-height: 90%;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+    /* -webkit-text-stroke: 1px #4E0000; */
+    color:#C2BABA;
+    text-decoration: none;
+}
+
+.detail-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(1px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000; 
+}
+
+.detail-modal {
+    width: 40vw;
+    height: 25vw;
+    padding: 40px;
+    position: relative;
+    background-image: url("../assets/album-overlay.svg");
+    background-size: cover;
+    
+}
+
+.detail-content {
+    justify-content: center;
+    position: relative;
+    left:18%;
+    filter: drop-shadow(5px 5px 10px rgba(0,0,0,0.5));
+}
+
+.close-button {
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    background: black;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+}
+
+.detail-content {
+    justify-content: center;
+}
+
+.button-text.start-listening{
+    text-align: end;
+    font-size: 1.2vw;
+    /* -webkit-text-stroke: 0.5px #4E0000; */
+    letter-spacing: 20%;
+    align-items: center;
+    margin:0;
+}
+
+.start-listening {
+    display: flex;
+    justify-content: center;
+    font-size: 4vw;
+    margin-top: 2vw;
+}
+
+.start-listening img {
+    height:7vw;
+}
+
+.remove-button {
+    display: flex;
+    justify-content: start;
+    position:relative;
+    left:17%;
+    background: none;
+    border: none;
+    font-size: 12px;
+}
+
+.tracklist img {
+    height: 10vw;
+}
+
+@media (max-width: 768px) {
+    .library-text {
+        width: 70vw;
+    }
+    .album-image {
+        width: 40vw;
+    }
+    .album-card-text {
+        font-size: 3vw;
+    }
+    .album-card-text h3 {
+        display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;  
+    overflow: hidden;
+    }
+    .button-text  {
+        position: absolute;
+        bottom: 15vw;
+        left: 11vw;
+        right: 5vw;
+        font-size: 8vw;
+    }
+}
+

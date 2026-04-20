@@ -9,7 +9,8 @@ import { mockUsers } from "../data/mockUsers";
 import { trackListening, updateNoteCount } from "../utils/tracking";
 import { useNoteSocket } from "../hooks/useNoteSocket";
 
-import { fetchNotes, createNote, updateNote, deleteNote, type PaginatedNotes, syncOfflineQueue, isServerReachable } from "../api/notesApi"
+// import { fetchNotes, createNote, updateNote, deleteNote, type PaginatedNotes, syncOfflineQueue, isServerReachable } from "../api/notesApi"
+import { fetchNotes, createNote, updateNote, deleteNote, type PaginatedNotes, isServerReachable, syncOfflineQueue } from "../api/notesGql"
 
 interface HomeProps {
   albums: Album[];

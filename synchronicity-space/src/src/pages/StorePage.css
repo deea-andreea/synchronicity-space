@@ -1,0 +1,10 @@
+.store-text {
+    height:50px;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .store-text {
+        width: 30vw;
+    }
+}

@@ -1,0 +1,307 @@
+.stats-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 3vw;
+    padding-right: 10vw;
+    padding-left: 10vw;
+}
+
+.camera-wrapper {
+    position: relative;
+    width: 43vw;
+}
+
+.camera-body {
+    width: 100%;
+    display: block;
+}
+
+.camera-screen {
+    position: absolute;
+    top: 35%; 
+    left: 11%;
+    width: 40%;
+    height: 50%;
+    font-family: 'Road Rage', sans-serif;
+}
+
+.screen-header {
+    display: flex;
+    justify-content: space-between;
+    color: #6f916c;
+    font-size: 1.2vw;
+    margin-bottom: 5px;
+    font-family: 'Slackey', sans-serif;
+
+}
+
+.screen-content {
+    margin-top: -2px;
+}
+
+.stats-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 1.5vw;
+}
+
+.stats-list li {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.screen-footer {
+    position: absolute;
+    bottom: -3vw;
+    left:2vw;
+    text-align: center;
+    font-size: 1.7vw;
+    letter-spacing: 10%;
+    color: #1A0000;
+}
+
+.btn-overlay {
+    position: absolute;
+    background: rgba(255, 255, 255, 0); 
+    border: none;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+.btn-up {
+    top: 40%;
+    left: 76%;
+    width: 40px;
+    height: 40px;
+}
+
+.btn-down {
+    top: 72%;
+    left: 76%;
+    width: 40px;
+    height: 40px;
+}
+
+.btn-right {
+    top:50%;
+    left:85%;
+    width: 40px;
+    height: 40px;
+}
+
+.btn-overlay:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.stats-info {
+    width: 40%;
+}
+
+.stats-info h2 {
+    font-family: 'Road Rage', sans-serif;
+    font-size: 4vw;
+    letter-spacing: 20%;
+}
+.stats-info p {
+    font-family: 'Road Rage', sans-serif;
+    font-size: 1.5vw;
+    letter-spacing: 20%;
+    margin-top: 2vw;
+}
+
+.viz-layout {
+  display: flex;
+    flex-direction: row; 
+    align-items: flex-end;
+    justify-content: space-around;
+    height: 100%;
+    padding: 10px;
+}
+
+
+.viz-legend {
+  list-style: none;
+  padding-left:1.3vw ;
+  text-align: left;
+  font-size: 1.5vw;
+}
+
+
+
+.legend-item-color-0 { color: #d7b653; }
+.legend-item-color-1 { color: #70d8ff; }
+.legend-item-color-2 { color: #5b9752; }
+.legend-item-color-3 { color: #8d62c6; }
+
+/* '#d7b653' : i === 1 ? '#70d8ff' : i===2? '#5b9752' : '#8d62c6' */
+
+.bar-chart-container {
+  display: flex;
+  flex-direction: row;
+  align-items: end;
+  height: 13vw;
+}
+
+.bar-chart-svg-container {
+    display: flex;
+    flex-direction: row;
+
+}
+
+.bar-column {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.vector-bar {
+  width: 2vw;
+  position: relative;
+  border-radius: 5px;
+}
+
+.vector-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  mask-image: url('/Vector.svg');
+  mask-size: cover;
+  -webkit-mask-image: url('/Vector.svg');
+  -webkit-mask-size: cover;
+  background-color: rgba(0,0,0,0.3); 
+}
+
+.weekday-field {
+    width:30px;
+    text-align: start;
+}
+
+.viz-legend-top {
+    display: flex;
+    justify-content: space-around;
+    font-size: 1.5vw;
+    margin-bottom: 3vw;
+}
+
+.legend-item.purple { color: #a288f0; }
+.legend-item.yellow { color: #f0e68c; }
+
+.bar-chart-container-weekly {
+    display: flex;
+    justify-content: space-between;
+    /* align-items: flex-end; */
+    /* flex-grow: 1; */
+    font-size: 1.5vw;
+    gap:2px;
+    margin-left: -30px;;
+}
+
+.day-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 15%;
+    
+}
+
+.bars-group {
+    display: flex;
+    align-items: flex-end;
+    height: 120px;
+    width: 100%;
+}
+
+
+.hours-bar { background-color: #a288f0; }
+.albums-bar { background-color: #f0e68c; }
+
+
+.day-label {
+    font-size: 1.4vw;
+    margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+    .stats-container {
+        flex-direction: column;
+        padding: 20px 5%;
+        align-items: center;
+        gap: 30px;
+    }
+
+    .camera-wrapper {
+        width: 95vw; 
+    }
+
+    .screen-header {
+        font-size: 3.5vw;
+        margin-bottom: 0px;
+    }
+
+    .stats-list {
+        font-size: 4vw; 
+        
+    }
+
+    .stats-list li {
+        margin-bottom: -3px;
+    }
+
+    .screen-footer {
+        font-size: 4.5vw;
+        bottom: -8vw; 
+        width: 100%;
+        left: 0;
+    }
+
+    .bar-chart-container {
+        height: 25vw; 
+    }
+
+    .vector-bar {
+        width: 5vw; 
+    }
+
+    .viz-legend {
+        font-size: 4vw;
+    }
+
+    .viz-legend-top {
+        font-size: 3.5vw;
+    }
+
+    .day-label {
+        font-size: 3vw;
+    }
+
+    .btn-overlay {
+        width: 50px;
+        height: 50px;
+    }
+
+    .btn-up { top: 38%; left: 75%; }
+    .btn-down { top: 70%; left: 75%; }
+    .btn-right { top: 48%; left: 84%; }
+
+    .stats-info {
+        width: 100%;
+        text-align: center;
+    }
+
+    .stats-info h2 {
+        font-size: 10vw; 
+        line-height: 1;
+    }
+
+    .stats-info p {
+        font-size: 5vw;
+        margin-top: 15px;
+    }
+}
