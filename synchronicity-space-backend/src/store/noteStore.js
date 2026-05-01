@@ -1,3 +1,5 @@
+import { recordNoteEvent } from "./statsStore.js";
+
 const SEED_NOTES = [
   {
     id: "seed-1",
@@ -27,8 +29,10 @@ export function getNoteById(id) {
     return notes.find((n) => n.id === id) ?? null;
 }
 
-export function addNote(note) {
+export function addNote(note, date= new Date().toISOString()) {
     notes.push(note);
+    recordNoteEvent(note.userId, date);
+    console.log(note);
     return note;
 }
 

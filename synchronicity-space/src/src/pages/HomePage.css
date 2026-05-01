@@ -1,17 +1,14 @@
 .container {
   padding: 0 8%;
-  /* This creates that consistent side breathing room from your image */
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  /* Crucial so padding doesn't increase width */
   margin-top: 120px;
 }
 
 .content {
   display: flex;
   justify-content: space-between;
-  /* Pushes turntable left and text/picks right */
   align-items: center;
   position: relative;
 }
@@ -87,7 +84,6 @@
   aspect-ratio: 1 / 1;
   object-fit: cover;
   border-radius: 4px;
-  /* Optional: slight rounding like a real sleeve */
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
@@ -350,7 +346,6 @@
 .simple-detail-rect {
   background: #000000;
   border: 2px solid #333;
-  /* Dark border for subtle definition */
   height: 25vw;
   width: 25vw;
   position: relative;
@@ -481,37 +476,29 @@
   cursor: pointer;
 }
 
-/* --- Mobile Responsiveness (Screens smaller than 768px) --- */
 @media (max-width: 768px) {
   .container {
     padding: 0 5%;
     margin-top: 60px;
-    /* Reduced margin for mobile header space */
   }
 
   .content {
     flex-direction: column;
-    /* Stacks the Turntable on top of the Player */
     align-items: center;
   }
 
-  /* 1. Make sections full width */
   .right-section,
   .left-section {
     width: 100%;
     height: auto;
-    /* Remove the fixed 35vw height from desktop */
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
   }
 
-  /* 2. Scale up the Turntable for mobile */
-  /* We use larger vw values so the turntable fills most of the screen width */
   .turntable-image {
     position: relative;
-    /* Change to relative so it takes up space in the stack */
     height: 80vw;
     left: 0;
     top: 0;
@@ -531,11 +518,8 @@
   .disk-image {
     position: absolute;
     left: 12.8vw;
-    /* Doubled from 6.4vw to maintain ratio at 80vw size */
     top: 15.2vw;
-    /* Doubled from 7.6vw */
     height: 52vw;
-    /* Doubled from 26vw */
   }
 
   .vinyl-label {
@@ -550,7 +534,6 @@
     height: 22vw;
   }
 
-  /* 3. Adjust Player View & Text */
   .left-section {
     text-align: center;
   }
@@ -593,26 +576,21 @@
 
   .progress-bar {
     width: 50vw;
-    /* ProgressBar fills screen width */
   }
 
-  /* 4. Quick Picks Layout */
   .quick-picks-grid {
     flex-wrap: wrap;
-    /* Allow picks to wrap to next line if needed */
     gap: 15px;
   }
 
   .quick-pick-card {
     width: 28vw;
-    /* Show ~3 items per row on mobile */
   }
 
   .quick-pick-info h3 {
     font-size: 3vw;
   }
 
-  /* 5. Options (Buttons at bottom) */
   .options-section {
     flex-direction: column;
     gap: 30px;

@@ -4,13 +4,13 @@ import type { Album } from "../models/Album";
 import { useSpotify } from "./Spotify"; // Your context hook
 import { playSpotifyAlbum } from "../App"; // Import the play function you wrote
 import type { Note } from "../models/Note";
-import { mockNotes } from "../data/mockNotes";
 import { mockUsers } from "../data/mockUsers";
-import { trackListening, updateNoteCount } from "../utils/tracking";
+// import { trackListening, updateNoteCount } from "../utils/tracking";
+import { recordListen, recordNote } from "../api/statsApi";
 import { useNoteSocket } from "../hooks/useNoteSocket";
 
-// import { fetchNotes, createNote, updateNote, deleteNote, type PaginatedNotes, syncOfflineQueue, isServerReachable } from "../api/notesApi"
-import { fetchNotes, createNote, updateNote, deleteNote, type PaginatedNotes, isServerReachable, syncOfflineQueue } from "../api/notesGql"
+import { fetchNotes, createNote, updateNote, deleteNote, type PaginatedNotes, syncOfflineQueue, isServerReachable } from "../api/notesApi"
+// import { fetchNotes, createNote, updateNote, deleteNote, type PaginatedNotes, isServerReachable, syncOfflineQueue } from "../api/notesGql"
 
 interface HomeProps {
   albums: Album[];
@@ -70,6 +70,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
 
   const [isOffline, setIsOffline] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isSyncingRef = useRef(false);
 
   const stopPolling = () => {
     if (pollingRef.current) {
@@ -79,34 +80,60 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
   };
 
   const handleBackOnline = async () => {
+    if (isSyncingRef.current) return;
+    isSyncingRef.current = true;
+
+    const reachable = await isServerReachable();
+    if (!reachable) {
+      isSyncingRef.current = false;
+      return;
+    }
+
     stopPolling();
     setIsOffline(false);
     setFetchError("");
 
     pageCacheRef.current = {};
+    prefetchRef.current = null;
 
     await syncOfflineQueue();
 
     if (currentTrackId && playingAlbum) {
-      fetchNotes({
+      const data = await fetchNotes({
         trackId: currentTrackId,
         albumId: playingAlbum.id,
-        page: notePage,
+        page: 1,
         pageSize: notesPerPage,
-      }).then((data) => {
-        pageCacheRef.current[notePage] = data.items;
-        setDisplayNotes(data.items);
-        setTotalPages(data.totalPages);
       });
+
+      pageCacheRef.current[1] = data.items;
+      setDisplayNotes(prev => {
+        // Remove any optimistic fake notes added while offline — the real ones are now in data.items
+        const withoutFakes = prev.filter(n => !n.id.startsWith("fake-"));
+        const existingIds = new Set(data.items.map(n => n.id));
+        const onlineOnly = withoutFakes.filter(n => !existingIds.has(n.id));
+        return [...data.items, ...onlineOnly];
+      });
+      setTotalPages(data.totalPages);
+      setNotePage(1);
     }
+    isSyncingRef.current = false;
   };
 
   const startPolling = () => {
     if (pollingRef.current) return; // already polling
     pollingRef.current = setInterval(async () => {
+      if (!navigator.onLine) {
+        setIsOffline(true);
+        return;
+      }
       const reachable = await isServerReachable();
+      console.log(reachable);
       if (reachable) {
         await handleBackOnline();
+      }
+      else {
+        setIsOffline(true);
       }
     }, 3000);
   };
@@ -142,7 +169,6 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
       return;
     }
 
-    // Page 1 is a fresh load — reset everything
     if (notePage === 1) {
       setDisplayNotes([]);
       prefetchRef.current = null;
@@ -224,38 +250,38 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
         return updated;
       })
       setNewNoteText("");
-      updateNoteCount(1);
+      recordNote(currentUser.id);
     }
     catch (err: any) {
       setNoteError(err.message ?? "Something went wrong posting the note.");
     }
   }
 
-  const listRef = useRef<HTMLDivElement>(null); 
+  const listRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-  const list = listRef.current;
-  if (!list) return;
-  console.log("scrollHeight:", list.scrollHeight, "clientHeight:", list.clientHeight);
-}, [displayNotes]);
- 
+    const list = listRef.current;
+    if (!list) return;
+    console.log("scrollHeight:", list.scrollHeight, "clientHeight:", list.clientHeight);
+  }, [displayNotes]);
+
   useEffect(() => {
-  const list = listRef.current;
-  if (!list || !showOverlay) return;
+    const list = listRef.current;
+    if (!list || !showOverlay) return;
 
-  const handleScroll = () => {
-    const { scrollTop, scrollHeight, clientHeight } = list;
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-    
-    console.log("scroll:", scrollTop, "distanceFromBottom:", distanceFromBottom);
-    
-    if (distanceFromBottom < 20 && hasMore && !isLoadingMore) {
-      setNotePage(prev => prev + 1);
-    }
-  };
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = list;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
-  list.addEventListener("scroll", handleScroll);
-  return () => list.removeEventListener("scroll", handleScroll);
-}, [hasMore, isLoadingMore, showOverlay]);
+      console.log("scroll:", scrollTop, "distanceFromBottom:", distanceFromBottom);
+
+      if (distanceFromBottom < 20 && hasMore && !isLoadingMore) {
+        setNotePage(prev => prev + 1);
+      }
+    };
+
+    list.addEventListener("scroll", handleScroll);
+    return () => list.removeEventListener("scroll", handleScroll);
+  }, [hasMore, isLoadingMore, showOverlay]);
 
   useEffect(() => {
     setNotePage(1);
@@ -264,19 +290,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
   }, [currentTrackId]);
 
 
-  useEffect(() => {
-    const handleOnline = async () => {
-      setFetchError("");
-      await syncOfflineQueue();
-      if (currentTrackId && playingAlbum) {
-        fetchNotes({ trackId: currentTrackId, albumId: playingAlbum.id, page: notePage, pageSize: notesPerPage })
-          .then(data => { setDisplayNotes(data.items); setTotalPages(data.totalPages); });
-      }
-    };
-
-    window.addEventListener("online", handleOnline);
-    return () => window.removeEventListener("online", handleOnline);
-  }, [currentTrackId, notePage]);
+  // Reconnection is handled entirely by handleBackOnline via the polling mechanism.
 
   const getUserById = (id: string) => mockUsers.find((u) => u.id === id);
   const currentUser = mockUsers.find((u) => u.id === "1") || mockUsers[0];
@@ -296,7 +310,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
       await deleteNote(id, currentUser.id);
       setDisplayNotes((prev) => prev.filter((n) => n.id !== id));
       setSelectedNote(null);
-      updateNoteCount(-1);
+      // updateNoteCount(-1);
     }
     catch (err: any) {
       setNoteError(err.message ?? "Could not delete note.");
@@ -346,6 +360,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
     const relevant = newNotes.filter(n => n.trackId === currentTrackId);
     if (relevant.length > 0) {
       setDisplayNotes(prev => [...relevant, ...prev]);
+      updateNoteCount(relevant.length);
     }
   });
 
@@ -359,7 +374,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
   }, [activeAlbum]);
 
   useEffect(() => {
-    if (playingAlbum) trackListening(playingAlbum);
+    if (playingAlbum) recordListen(currentUser.id, playingAlbum.id);;
   }, [playingAlbum?.id]);
 
 
@@ -497,18 +512,9 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
                           </div>
                         );
                       })}
-
-                      {isLoadingMore && <p className="loading-text">Loading more...</p>}
-                      {!hasMore && displayNotes.length > 0 && <p className="empty-text">— end —</p>}
                       <div ref={sentinelRef} style={{ height: "1px" }} />
                     </div>
-                    <button
-                      className="action-btn"
-                      onClick={runSimulation}
-                      disabled={simulating}
-                    >
-                      {simulating ? "Simulating..." : "Simulate notes"}
-                    </button>
+
                     <div className="add-note-container">
                       <textarea
                         className="note-input"

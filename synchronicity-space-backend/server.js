@@ -26,7 +26,7 @@ setBroadcast((payload) => {
   })
 })
  
-// server.listen(PORT, () => console.log(`Running on http://localhost:${PORT}`));
-server.listen(3000, () => {
-  console.log(' GraphQL API at http://localhost:3000/graphql');
-})
+server.listen(PORT, () => console.log(`Running on http://localhost:${PORT}`));
+// server.listen(3000, () => {
+//   console.log(' GraphQL API at http://localhost:3000/graphql');
+// })

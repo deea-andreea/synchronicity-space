@@ -288,6 +288,11 @@
   padding-bottom: 1vw;
 }
 
+.offline-banner {
+    font-size: 0.5vw;
+    color:red;
+  }
+
 .notes-list {
   font-size: 0.6vw;
   /* font-family: 'Road Rage', sans-serif; */
@@ -531,7 +536,6 @@
   .disk-image {
     position: absolute;
     left: 12.8vw;
-    /* Doubled from 6.4vw to maintain ratio at 80vw size */
     top: 15.2vw;
     /* Doubled from 7.6vw */
     height: 52vw;
@@ -612,7 +616,6 @@
     font-size: 3vw;
   }
 
-  /* 5. Options (Buttons at bottom) */
   .options-section {
     flex-direction: column;
     gap: 30px;
@@ -642,6 +645,7 @@
   .overlay-title {
     font-size: 2vw;
   }
+
 
   .notes-list {
     font-size: 1.5vw;

@@ -2,7 +2,6 @@ import request from "supertest";
 import app from "../app.js";
 import { resetStore } from "../store/noteStore.js";
 
-// Reset to seed state before every single test so they never affect each other
 beforeEach(() => resetStore());
 
 const VALID_NOTE = {
@@ -12,7 +11,6 @@ const VALID_NOTE = {
   text: "Great track, very soothing.",
 };
 
-// Helper — creates a note and returns the response body
 async function createNote(overrides = {}) {
   const res = await request(app)
     .post("/notes")
@@ -21,7 +19,6 @@ async function createNote(overrides = {}) {
   return res.body;
 }
 
-// Helper — clears all notes including seed data
 async function clearAllNotes() {
   const res = await request(app).get("/notes");
   for (const note of res.body.items) {
@@ -31,10 +28,6 @@ async function clearAllNotes() {
   }
 }
 
-// ===========================================================================
-// Health check
-// ===========================================================================
-
 describe("GET /", () => {
   test("returns 200 and status ok", async () => {
     const res = await request(app).get("/");
@@ -42,10 +35,6 @@ describe("GET /", () => {
     expect(res.body.status).toBe("ok");
   });
 });
-
-// ===========================================================================
-// CREATE — POST /notes
-// ===========================================================================
 
 describe("POST /notes", () => {
   test("creates a note and returns 201", async () => {
@@ -114,9 +103,6 @@ describe("POST /notes", () => {
   });
 });
 
-// ===========================================================================
-// READ — GET /notes and GET /notes/:id
-// ===========================================================================
 
 describe("GET /notes", () => {
   test("returns 200 and paginated shape", async () => {
@@ -207,9 +193,6 @@ describe("GET /notes/:id", () => {
   });
 });
 
-// ===========================================================================
-// UPDATE — PUT /notes/:id
-// ===========================================================================
 
 describe("PUT /notes/:id", () => {
   test("updates text and returns the updated note", async () => {
@@ -243,10 +226,10 @@ describe("PUT /notes/:id", () => {
   });
 
   test("returns 403 when a different user tries to edit", async () => {
-    const note = await createNote(); // created by userId "1"
+    const note = await createNote(); 
     const res = await request(app)
       .put(`/notes/${note.id}`)
-      .query({ requesting_user_id: "99" }) // different user
+      .query({ requesting_user_id: "99" }) 
       .send({ text: "Trying to steal this note." });
     expect(res.status).toBe(403);
   });
@@ -287,9 +270,6 @@ describe("PUT /notes/:id", () => {
   });
 });
 
-// ===========================================================================
-// DELETE — DELETE /notes/:id
-// ===========================================================================
 
 describe("DELETE /notes/:id", () => {
   test("deletes a note and returns 204", async () => {
@@ -315,7 +295,7 @@ describe("DELETE /notes/:id", () => {
   });
 
   test("returns 403 when a different user tries to delete", async () => {
-    const note = await createNote(); // created by userId "1"
+    const note = await createNote();
     const res = await request(app)
       .delete(`/notes/${note.id}`)
       .query({ requesting_user_id: "99" });
@@ -337,10 +317,6 @@ describe("DELETE /notes/:id", () => {
     expect(res.status).toBe(404);
   });
 });
-
-// ===========================================================================
-// STATISTICS — GET /notes/stats
-// ===========================================================================
 
 describe("GET /notes/stats", () => {
   test("returns 200", async () => {
@@ -378,8 +354,8 @@ describe("GET /notes/stats", () => {
 
   test("calculates average note length correctly", async () => {
     await clearAllNotes();
-    await createNote({ text: "Short note." });       // 11 chars
-    await createNote({ text: "A longer note text." }); // 19 chars
+    await createNote({ text: "Short note." });
+    await createNote({ text: "A longer note text." }); 
     const res = await request(app).get("/notes/stats");
     expect(res.body.avgNoteLength).toBe(15);
   });

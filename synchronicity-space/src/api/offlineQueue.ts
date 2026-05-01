@@ -24,6 +24,12 @@ export function clearQueue(): void {
     localStorage.removeItem(KEY);
 }
 
+export function dequeueFirst(): void {
+    const queue = getQueue();
+    queue.shift();
+    localStorage.setItem(KEY, JSON.stringify(queue));
+}
+
 export function isOnline(): boolean {
     return navigator.onLine;
 }

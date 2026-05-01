@@ -1,7 +1,5 @@
-
-
 import type { Note } from "../models/Note";
-import { isOnline, enqueue, getQueue, type PendingOperation, clearQueue } from "./offlineQueue";
+import { isOnline, enqueue, getQueue, type PendingOperation, clearQueue, dequeueFirst } from "./offlineQueue";
 // import { randomUUID } from "crypto";
 
 const BASE_URL = "http://localhost:3000";
@@ -46,6 +44,7 @@ export async function createNote(data: {
     const id = generateTempId();
     enqueue({ type: "CREATE", tempId: id, data });
     console.log(getQueue());
+    return { id, ...data, createdAt: new Date().toISOString() };
   }
   try {
     console.log(JSON.stringify(data));
@@ -67,7 +66,11 @@ export async function createNote(data: {
       const id = generateTempId();
       enqueue({ type: "CREATE", tempId: id, data });
       console.log(getQueue());
-      return { id, ...data, createdAt: new Date().toISOString() };
+      return {
+        id: generateTempId(),
+        ...data,
+        createdAt: new Date().toISOString(),
+      };
     }
     throw error;
   }
@@ -100,7 +103,7 @@ export async function updateNote(
     }
 
     return res.json();
-  } catch(error) {
+  } catch (error) {
     enqueue({ type: "UPDATE", noteId, text, requestingUserId });
     throw Object.assign(new Error("offline"), { offline: true });
   }
@@ -129,24 +132,32 @@ function generateTempId(): string {
 export async function syncOfflineQueue(): Promise<void> {
   const queue = getQueue();
   if (queue.length === 0) return;
-  console.log("here");
 
   for (const op of queue) {
-    console.log(op.type);
     try {
       if (op.type === "CREATE") {
-        await createNote(op.data);
+        await fetch(`${BASE_URL}/notes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(op.data),
+        });
       } else if (op.type === "UPDATE") {
-        await updateNote(op.noteId, op.text, op.requestingUserId);
+        await fetch(`${BASE_URL}/notes/${op.noteId}?requesting_user_id=${op.requestingUserId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: op.text }),
+        });
       } else if (op.type === "DELETE") {
-        await deleteNote(op.noteId, op.requestingUserId);
+        await fetch(`${BASE_URL}/notes/${op.noteId}?requesting_user_id=${op.requestingUserId}`, {
+          method: "DELETE",
+        });
       }
-    } catch {
-      console.warn("Sync: operation failed, skipping", op);
+      dequeueFirst();
+    } catch (e) {
+      console.warn("Sync failed for op, will retry next time:", op);
+      return;
     }
   }
-
-  clearQueue();
 }
 
 export async function isServerReachable(): Promise<boolean> {

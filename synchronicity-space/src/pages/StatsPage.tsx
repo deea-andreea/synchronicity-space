@@ -1,62 +1,80 @@
 import { useEffect, useMemo, useState } from "react";
-import { getLastWeekStats, getTopGenres } from "../utils/stats";
+// import { getLastWeekStats, getTopGenres } from "../utils/stats";
+import { fetchStatsSummary, recordListen } from "../api/statsApi";
 import './StatsPage.css'
-import { getCookie } from "../utils/cookies";
+import { useNoteSocket } from "../hooks/useNoteSocket";
+// import { getCookie } from "../utils/cookies";
 
 export default function StatsPage() {
-    const [setTopGenres] = useState<any[]>([]);
-    const [setWeekStats] = useState<any[]>([]);
-    const [refreshKey, setRefreshKey] = useState(0);
-    const [history, setHistory] = useState<any[]>([]);
-
-    const topGenres = useMemo(() => getTopGenres(history), [history]);
-    const weekStats = useMemo(() => getLastWeekStats(history), [history]);
-
+    const [topGenres, setTopGenres] = useState<any[]>([]);
+    const [weekStats, setWeekStats] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const currentUserId = "1";
     const [view, setView] = useState<"genres-tab" | "genres-viz" | "weekly-tab" | "weekly-viz">("genres-tab");
     const maxGenreCount = Math.max(...topGenres.map(g => g.count), 1);
     const maxAlbums = Math.max(...weekStats.map(g => g.albums), 1);
+    const maxNotes = Math.max(...weekStats.map(g => g.notes), 1);
+    const max = Math.max(maxAlbums, maxNotes);
 
     const GENRES = ["Rock", "Pop", "Blues", "Jazz"];
 
     useEffect(() => {
-        const data = getCookie("listening_history");
-
-        if (data) {
-            try {
-                setHistory(JSON.parse(data));
-            } catch {
-                setHistory([]);
-            }
-        }
+        fetchStatsSummary(currentUserId)
+            .then(data => {
+                // setTopGenres(data.topGenres);
+                setWeekStats(data.weekStats);
+            })
+            .catch(() => {
+                setTopGenres([]);
+                setWeekStats([]);
+            })
+            .finally(() => setLoading(false));
     }, []);
 
-    const simulationOneStep = () => {
-        const now = new Date();
-        const len = Math.random() * 5
+    const handleSimulationClick = async () => {
+        // Generate fake listening events on the backend
+        const albums = [
+            { id: "1ATL5uqDgopeOnvYm2o0Q3", genre: "Rock" },
+            { id: "2", genre: "Pop" },
+            { id: "3", genre: "Grunge" },
+            { id: "4", genre: "Blues" },
+        ];
 
-        const newEntries = Array.from({ length: len }).map((_, i) => ({
-            id: `sim-${Date.now()}-${i}`,
-            genre: GENRES[Math.floor(Math.random() * GENRES.length)],
-            date: new Date(
-                now.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000
-            ),
-        }));
-        setHistory(prev => [...prev, ...newEntries]);
-    };
-    const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+        // POST several listen events spread across the last week
+        const promises = Array.from({ length: 20 }, (_, i) => {
+            const album = albums[i % albums.length];
+            return recordListen(currentUserId, album.id);
+        });
 
-    const startSimulation = async () => {
-        for (let i = 0; i < 40; i++) {
-            getTopGenres([]);
-            simulationOneStep();
-            await delay(500);
-        }
+        await Promise.all(promises);
+
+        // Re-fetch stats after simulation
+        const data = await fetchStatsSummary(currentUserId);
+        setTopGenres(data.topGenres);
+        setWeekStats(data.weekStats);
     };
 
-    const handleSimulationClick = () => {
-        startSimulation();
-        setRefreshKey(prev => prev + 1);
+    const [simulating, setSimulating] = useState(false);
+
+    const runSimulation = async () => {
+        setSimulating(true);
+        await fetch("http://localhost:3000/generator/start", { method: "POST" });
+        setTimeout(async () => {
+            await fetch("http://localhost:3000/generator/stop", { method: "POST" });
+            setSimulating(false);
+        }, 10000);
     };
+
+    useNoteSocket(() => {
+        fetchStatsSummary(currentUserId)
+            .then(data => {
+                // setTopGenres(data.topGenres);
+                setWeekStats(data.weekStats);
+                console.log(data)
+            })
+            .catch(() => { });
+
+    });
 
     return (
         <div className="library-container">
@@ -101,7 +119,7 @@ export default function StatsPage() {
                                                         <div className="vector-overlay"
                                                             style={{
                                                                 // height: `${(item.count / maxGenreCount) * 100}%`,
-                                                                backgroundColor: i === 0 ? '#d7b653c6' : i === 1 ? '#70d9ffa7' : i === 2 ? '#5b9752b6' : i===3 ? '#8d62c6aa': '#ffffffa8'
+                                                                backgroundColor: i === 0 ? '#d7b653c6' : i === 1 ? '#70d9ffa7' : i === 2 ? '#5b9752b6' : i === 3 ? '#8d62c6aa' : '#ffffffa8'
                                                             }}></div>
                                                     </div>
                                                 </div>
@@ -157,23 +175,27 @@ export default function StatsPage() {
                                                 <div className="bars-group">
                                                     <div
                                                         className="vector-bar"
-                                                        style={{ height: `${(item.notes / maxAlbums) * 100}%`, 
-                                                            backgroundColor:'transparent'}}
+                                                        style={{
+                                                            height: `${(item.notes / max) * 100}%`,
+                                                            backgroundColor: 'transparent'
+                                                        }}
                                                     >
                                                         <div className="vector-overlay"
-                                                        style={{
-                                                            backgroundColor: '#f0e68cc1'
-                                                        }}></div>
+                                                            style={{
+                                                                backgroundColor: '#f0e68cc1'
+                                                            }}></div>
                                                     </div>
                                                     <div
                                                         className="vector-bar albums-bar"
-                                                        style={{ height: `${(item.albums / maxAlbums) * 100}%`,
-                                                    backgroundColor:'transparent' }}
+                                                        style={{
+                                                            height: `${(item.albums / max) * 100}%`,
+                                                            backgroundColor: 'transparent'
+                                                        }}
                                                     >
                                                         <div className="vector-overlay"
-                                                        style={{
-                                                            backgroundColor:'#a288f0c2'
-                                                        }}></div>
+                                                            style={{
+                                                                backgroundColor: '#a288f0c2'
+                                                            }}></div>
                                                     </div>
                                                 </div>
                                                 <span className="day-label">{item.weekday.toLowerCase()}</span>
@@ -219,6 +241,13 @@ export default function StatsPage() {
                     <button onClick={handleSimulationClick}>
                         Start Simulation
                     </button>
+                    <button
+                        onClick={runSimulation}
+                        disabled={simulating}
+                    >
+                        {simulating ? "⏳ Simulating..." : "⚡ Simulate activity"}
+                    </button>
+                    {simulating && <p style={{ fontSize: "0.8vw", color: "#c4ac86" }}>Generating live data...</p>}
                 </div>
             </div>
         </div >
