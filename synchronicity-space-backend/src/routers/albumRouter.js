@@ -1,10 +1,15 @@
 import {Router} from "express";
 import { getAllAlbums, getAlbumById } from "../store/albumStore.js";
+import { Album } from '../models/Album.js'
+import { Track } from '../models/Track.js';
 
 export const albumRouter = Router();
 
-albumRouter.get("/", (req, res) => {
-    res.json(getAllAlbums());
+albumRouter.get("/", async (req, res) => {
+  const albums = await Album.findAll({
+    include: [{ model: Track, as: 'Tracks' }] 
+  });
+  res.json(albums);
 });
 
 albumRouter.get("/:id", (req, res) => {

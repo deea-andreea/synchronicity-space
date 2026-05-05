@@ -1,3 +1,10 @@
+.title-text {
+    font-family: 'Press Start 2P';
+    font-size: 4vw;
+    color:rgb(124, 151, 134);
+    text-shadow: 5px 5px 6px rgba(0, 0, 0, 0.856);
+    -webkit-text-stroke: 1px #0d3a12;
+}
 .library-container {
     margin-top:120px;
 }
@@ -113,12 +120,12 @@
 .button-text {
     background: none;
     border:none;
-    font-family: 'Slackey', sans-serif;
-    font-size: 40px;
+    font-family: 'Press Start 2P';
+    font-size: 20px;
     line-height: 90%;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
-    /* -webkit-text-stroke: 1px #4E0000; */
-    color:#C2BABA;
+    -webkit-text-stroke: 0.5px #3f1313;
+    color:#d9c08c;
     text-decoration: none;
 }
 

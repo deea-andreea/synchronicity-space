@@ -65,7 +65,8 @@ export default function LibraryPage({ albums, onRemove, onPlayAlbum }: LibraryPr
 
   return (
     <div className="library-container">
-      <img className="library-text" src="/library-text.svg" />
+      {/* <img className="library-text" src="/library-text.svg" /> */}
+      <div className="title-text">Your Library</div>
 
       <div className="master-view">
         <button
@@ -121,7 +122,7 @@ export default function LibraryPage({ albums, onRemove, onPlayAlbum }: LibraryPr
                 <div className="tracklist">
                   <img src="/track-list-text.svg" alt="Track List" />
                   <ul>
-                    {selectedAlbum.tracks.map(track => (
+                    {selectedAlbum.Tracks.map(track => (
                       <li key={track.id}>{track.trackNumber}. {track.title}</li>
                     ))}
                   </ul>

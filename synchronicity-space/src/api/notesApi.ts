@@ -1,8 +1,7 @@
 import type { Note } from "../models/Note";
 import { isOnline, enqueue, getQueue, type PendingOperation, clearQueue, dequeueFirst } from "./offlineQueue";
 // import { randomUUID } from "crypto";
-
-const BASE_URL = "http://localhost:3000";
+import { API_BASE_URL } from "../App";
 
 export interface PaginatedNotes {
   items: Note[];
@@ -25,7 +24,7 @@ export async function fetchNotes(params: {
   if (params.page) query.set("page", String(params.page));
   if (params.pageSize) query.set("pageSize", String(params.pageSize));
 
-  const res = await fetch(`${BASE_URL}/notes?${query}`);
+  const res = await fetch(`${API_BASE_URL}/notes?${query}`);
   console.log(res);
 
   if (!res.ok) throw new Error("Failed to fetch notes");
@@ -48,7 +47,7 @@ export async function createNote(data: {
   }
   try {
     console.log(JSON.stringify(data));
-    const res = await fetch(`${BASE_URL}/notes`, {
+    const res = await fetch(`${API_BASE_URL}/notes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -89,7 +88,7 @@ export async function updateNote(
 
   try {
     const res = await fetch(
-      `${BASE_URL}/notes/${noteId}?requesting_user_id=${requestingUserId}`,
+      `${API_BASE_URL}/notes/${noteId}?requesting_user_id=${requestingUserId}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -115,7 +114,7 @@ export async function deleteNote(
   requestingUserId: string
 ): Promise<void> {
   const res = await fetch(
-    `${BASE_URL}/notes/${noteId}?requesting_user_id=${requestingUserId}`,
+    `${API_BASE_URL}/notes/${noteId}?requesting_user_id=${requestingUserId}`,
     { method: "DELETE" }
   );
 
@@ -136,19 +135,19 @@ export async function syncOfflineQueue(): Promise<void> {
   for (const op of queue) {
     try {
       if (op.type === "CREATE") {
-        await fetch(`${BASE_URL}/notes`, {
+        await fetch(`${API_BASE_URL}/notes`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(op.data),
         });
       } else if (op.type === "UPDATE") {
-        await fetch(`${BASE_URL}/notes/${op.noteId}?requesting_user_id=${op.requestingUserId}`, {
+        await fetch(`${API_BASE_URL}/notes/${op.noteId}?requesting_user_id=${op.requestingUserId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: op.text }),
         });
       } else if (op.type === "DELETE") {
-        await fetch(`${BASE_URL}/notes/${op.noteId}?requesting_user_id=${op.requestingUserId}`, {
+        await fetch(`${API_BASE_URL}/notes/${op.noteId}?requesting_user_id=${op.requestingUserId}`, {
           method: "DELETE",
         });
       }
@@ -162,7 +161,7 @@ export async function syncOfflineQueue(): Promise<void> {
 
 export async function isServerReachable(): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE_URL}/`, { signal: AbortSignal.timeout(2000) });
+    const res = await fetch(`${API_BASE_URL}/`, { signal: AbortSignal.timeout(2000) });
     return res.ok;
   } catch {
     return false;

@@ -16,16 +16,16 @@ interface HomeProps {
   albums: Album[];
   activeAlbum: Album | null;
   onPlayAlbum: (album: Album) => void;
+  currentUser: any;
 }
 
-export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps) {
+export default function HomePage({ albums, activeAlbum, onPlayAlbum, currentUser }: HomeProps) {
   const [playingAlbum, setPlayingAlbum] = useState<Album | null>(null);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [showOverlay, setShowOverlay] = useState(false);
   const [noteError, setNoteError] = useState("");
 
   const sentinelRef = useRef<HTMLDivElement>(null);
-
 
   // const { player, deviceId } = useSpotify();
   const player = null;
@@ -38,6 +38,8 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
 
     onPlayAlbum(album);
     setCurrentTrackIndex(0);
+    console.log(album)
+    recordListen(currentUser.id, album.id, album.genre);
 
     const ALBUM_URI = "spotify:album:1nG8mArxQsJplIY6w50aQg";
 
@@ -106,9 +108,10 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
         pageSize: notesPerPage,
       });
 
+      console.log(currentTrackId, playingAlbum.id);
+
       pageCacheRef.current[1] = data.items;
       setDisplayNotes(prev => {
-        // Remove any optimistic fake notes added while offline — the real ones are now in data.items
         const withoutFakes = prev.filter(n => !n.id.startsWith("fake-"));
         const existingIds = new Set(data.items.map(n => n.id));
         const onlineOnly = withoutFakes.filter(n => !existingIds.has(n.id));
@@ -160,7 +163,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
 
   const [fetchError, setFetchError] = useState("");
 
-  const currentTrackId = playingAlbum?.tracks[currentTrackIndex]?.id;
+  const currentTrackId = playingAlbum?.Tracks[currentTrackIndex]?.id;
   const pageCacheRef = useRef<Record<number, Note[]>>({});
 
   useEffect(() => {
@@ -244,11 +247,8 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
         albumId: playingAlbum.id,
         text: newNoteText,
       });
-      setDisplayNotes(prev => {
-        const updated = [created, ...prev];
-        pageCacheRef.current[notePage] = updated;  // ← keep cache in sync
-        return updated;
-      })
+      setDisplayNotes(prev => [created, ...prev]);
+      pageCacheRef.current[1] = [created, ...(pageCacheRef.current[1] || [])];
       setNewNoteText("");
       recordNote(currentUser.id);
     }
@@ -290,10 +290,6 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
   }, [currentTrackId]);
 
 
-  // Reconnection is handled entirely by handleBackOnline via the polling mechanism.
-
-  const getUserById = (id: string) => mockUsers.find((u) => u.id === id);
-  const currentUser = mockUsers.find((u) => u.id === "1") || mockUsers[0];
 
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
 
@@ -373,10 +369,6 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
     }
   }, [activeAlbum]);
 
-  useEffect(() => {
-    if (playingAlbum) recordListen(currentUser.id, playingAlbum.id);;
-  }, [playingAlbum?.id]);
-
 
   return (
     <div className="container">
@@ -436,7 +428,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
                     style={{ cursor: 'pointer' }} />
                   <div className="track-info">
                     <p className="track-name">
-                      {playingAlbum.tracks[currentTrackIndex]?.title || "Loading track..."}
+                      {playingAlbum.Tracks[currentTrackIndex]?.title || "Loading track..."}
                     </p>
 
                     <div className="progress-bar">
@@ -484,7 +476,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
                 <div className="detail-modal-note">
                   <button className="close-button-note" onClick={closeNotes}>X</button>
                   <div className="detail-content-note">
-                    <h2 className="overlay-title">Notes on {playingAlbum?.tracks[currentTrackIndex]?.title}</h2>
+                    <h2 className="overlay-title">Notes on {playingAlbum?.Tracks[currentTrackIndex]?.title}</h2>
                     <div className="notes-list" ref={listRef}>
                       {fetchError && <p className="error-text">{fetchError}</p>}
                       {isOffline && (
@@ -497,17 +489,16 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
                       )}
 
                       {displayNotes.map((note) => {
-                        const user = getUserById(note.userId);
                         return (
                           <div
                             key={note.id}
-                            className={`note-entry ${user?.id === "1" ? "is-me" : ""} ${selectedNote?.id === note.id ? "active-note" : ""
+                            className={`note-entry ${note.userId === currentUser?.id ? "is-me" : ""} ${selectedNote?.id === note.id ? "active-note" : ""
                               }`}
                             onClick={() => setSelectedNote(note)}
                           >
                             <div className="note-body">
                               <p>{note.text.substring(0, 30)}...</p>
-                              <span className="note-author">-{user?.name}</span>
+                              <span className="note-author">-{note.userId === currentUser?.id ? "Me" : (note.User?.username || "Listener")}</span>
                             </div>
                           </div>
                         );
@@ -553,7 +544,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum }: HomeProps
                       </div>
 
                       <div className="full-note-footer">
-                        <p>By: {getUserById(selectedNote.userId)?.name}</p>
+                        <p>By: {selectedNote.userId === currentUser.id ? "Me" : (selectedNote.User?.username || "Listener")}</p>
                         <p>Date: {new Date(selectedNote.createdAt).toLocaleDateString()}</p>
 
                         {selectedNote.userId === currentUser.id && (

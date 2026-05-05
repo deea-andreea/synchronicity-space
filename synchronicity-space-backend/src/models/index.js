@@ -1,0 +1,17 @@
+'use strict';
+
+import { sequelize } from '../database.js'; // Use your existing connection
+import { User } from './User.js';
+import { Note } from './Note.js';
+import { Album } from './Album.js';
+import { Track } from './Track.js';
+import { Listen } from './Listen.js';
+
+User.hasMany(Note, { foreignKey: 'userId' });
+Note.belongsTo(User, { foreignKey: 'userId' });
+Album.hasMany(Track, { as: 'Tracks', foreignKey: 'albumId' });
+Track.belongsTo(Album, { foreignKey: 'albumId' });
+User.hasMany(Listen, { foreignKey: 'userId' });
+Listen.belongsTo(User, { foreignKey: 'userId' });
+
+export { sequelize, User, Note, Album, Track, Listen };

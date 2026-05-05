@@ -1,10 +1,12 @@
 import { Router } from "express";
 import { getAllUsers, getUserById } from "../store/userStore.js";
+import { User } from '../models/User.js';
 
 export const userRouter = Router();
 
-userRouter.get("/", (req, res) => {
-  res.json(getAllUsers());
+userRouter.get("/", async (req, res) => {
+  const users = await User.findAll();
+  res.json(users);
 });
 
 userRouter.get("/:id", (req, res) => {

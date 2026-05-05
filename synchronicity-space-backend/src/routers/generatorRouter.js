@@ -51,8 +51,6 @@ generatorRouter.post("/start", (req, res) => {
                 faker.date.recent({ days: 7 }).toISOString()
             );
 
-            
-
             return {
                 id: randomUUID(),
                 userId: "1",

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import LibraryPage from "./pages/LibraryPage";
@@ -12,12 +12,15 @@ import { SpotifyProvider } from "./pages/Spotify";
 import StatsPage from "./pages/StatsPage";
 import LoginPage from "./pages/LoginPage";
 import ListeningSpacePage from "./pages/ListeningSpacePage";
+export const API_BASE_URL = `http://${window.location.hostname}:3000`;
+
+
 
 export const playSpotifyAlbum = async (token: string, deviceId: string, albumUri: string) => {
   console.log("Using Token:", token);
   await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
     method: 'PUT',
-    body: JSON.stringify({ context_uri: albumUri }), 
+    body: JSON.stringify({ context_uri: albumUri }),
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
@@ -27,45 +30,39 @@ export const playSpotifyAlbum = async (token: string, deviceId: string, albumUri
 
 export default function App() {
 
-  const [libraryAlbums, setLibraryAlbums] = useState<Album[]>(
-    mockAlbums.slice(0, 4).map(album => ({ ...album, status: 'owned' }))
-  );
-
-  const [storeAlbums, setStoreAlbums] = useState<Album[]>(
-    mockAlbums.slice(4).map(album => ({ ...album, status: 'available' }))
-  );
-
-  const handleOrder = (albumId: string) => {
-    setStoreAlbums(prev =>
-      prev.map(a => a.id === albumId ? { ...a, status: 'delivering' } : a)
-    );
-
-    setTimeout(() => {
-      const albumToDeliver = storeAlbums.find(a => a.id === albumId);
-
-      if (albumToDeliver) {
-        setStoreAlbums(prev => prev.filter(a => a.id !== albumId));
-        setLibraryAlbums(prev => [...prev, { ...albumToDeliver, status: 'owned' }]);
-      }
-    }, 60000);
-  };
-
-  const handleRemove = (id: string) => {
-    setLibraryAlbums((prev) => prev.filter(album => album.id !== id));
-  };
-
-  const handleUpdateTracks = (albumId: string, updatedTracks: Track[]) => {
-    setStoreAlbums(prev =>
-      prev.map(album =>
-        album.id === albumId ? { ...album, tracks: updatedTracks } : album
-      )
-    );
-  };
-
+ const [libraryAlbums, setLibraryAlbums] = useState<Album[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [activeAlbum, setActiveAlbum] = useState<Album | null>(null);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // 1. Fetch all albums + tracks from DB
+        const albRes = await fetch(`${API_BASE_URL}/albums`);
+        const albumsFromDb = await albRes.json();
+        setLibraryAlbums(albumsFromDb);
+
+        // 2. Fetch users to set the "active" session
+        const userRes = await fetch(`${API_BASE_URL}/users`);
+        const usersFromDb = await userRes.json();
+        
+        // Find your specific user or default to the first one
+        const activeUser = usersFromDb.find((u: any) => u.username === "YourUsername") || usersFromDb[0];
+        setCurrentUser(activeUser);
+      } catch (err) {
+        console.error("Database connection failed:", err);
+      }
+    };
+
+    loadData();
+  }, []);
 
   const handlePlayAlbum = (album: Album) => {
     setActiveAlbum(album);
+  };
+
+  const handleRemove = (id: string) => {
+    setLibraryAlbums(prev => prev.filter(a => a.id !== id));
   };
 
 
@@ -79,7 +76,7 @@ export default function App() {
           <Route
             path="library"
             index element={<LibraryPage albums={libraryAlbums} onRemove={handleRemove} onPlayAlbum={handlePlayAlbum} />} />
-          <Route
+          {/* <Route
             path="store"
             element={
               <StorePage
@@ -88,32 +85,34 @@ export default function App() {
                 onUpdateTracks={handleUpdateTracks}
               />
             }
-          />
+          /> */}
           <Route
             path="home"
             element={
               <HomePage
                 albums={libraryAlbums}
                 activeAlbum={activeAlbum}
-                onPlayAlbum={handlePlayAlbum} />
+                onPlayAlbum={handlePlayAlbum}
+                currentUser={currentUser} />
             } />
           <Route
             path="stats"
             element={
-              <StatsPage />
+              <StatsPage
+              currentUser={currentUser} />
             } />
           <Route
             path="login"
             element={
-              <LoginPage/>
+              <LoginPage />
             }
-            />
-            <Route
+          />
+          <Route
             path="listening-space"
             element={
-              <ListeningSpacePage/>
+              <ListeningSpacePage />
             }
-            />
+          />
 
         </Route>
       </Routes>

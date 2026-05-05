@@ -100,7 +100,8 @@ export default function App() {
           <Route
             path="stats"
             element={
-              <StatsPage />
+              <StatsPage
+              currentUser={} />
             } />
           <Route
             path="login"

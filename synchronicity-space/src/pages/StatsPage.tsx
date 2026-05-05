@@ -5,31 +5,32 @@ import './StatsPage.css'
 import { useNoteSocket } from "../hooks/useNoteSocket";
 // import { getCookie } from "../utils/cookies";
 
-export default function StatsPage() {
+export default function StatsPage({currentUser}: {currentUser: any}) {
     const [topGenres, setTopGenres] = useState<any[]>([]);
     const [weekStats, setWeekStats] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const currentUserId = "1";
     const [view, setView] = useState<"genres-tab" | "genres-viz" | "weekly-tab" | "weekly-viz">("genres-tab");
+    console.log(currentUser)
     const maxGenreCount = Math.max(...topGenres.map(g => g.count), 1);
-    const maxAlbums = Math.max(...weekStats.map(g => g.albums), 1);
-    const maxNotes = Math.max(...weekStats.map(g => g.notes), 1);
-    const max = Math.max(maxAlbums, maxNotes);
+    const max = Math.max(
+        ...weekStats.map(s => s.albums),
+        ...weekStats.map(s => s.notes),
+        1
+    );
 
     const GENRES = ["Rock", "Pop", "Blues", "Jazz"];
 
     useEffect(() => {
-        fetchStatsSummary(currentUserId)
+        setLoading(true);
+        fetchStatsSummary(currentUser.id) 
             .then(data => {
-                // setTopGenres(data.topGenres);
-                setWeekStats(data.weekStats);
+                setTopGenres(data.topGenres || []);
+                setWeekStats(data.weekStats || []);
             })
-            .catch(() => {
-                setTopGenres([]);
-                setWeekStats([]);
-            })
+            .catch(err => console.error("Stats Error:", err))
             .finally(() => setLoading(false));
-    }, []);
+    }, [currentUser.id]);
 
     const handleSimulationClick = async () => {
         // Generate fake listening events on the backend
@@ -43,7 +44,7 @@ export default function StatsPage() {
         // POST several listen events spread across the last week
         const promises = Array.from({ length: 20 }, (_, i) => {
             const album = albums[i % albums.length];
-            return recordListen(currentUserId, album.id);
+            return recordListen(currentUserId, album.id, album.genre);
         });
 
         await Promise.all(promises);
@@ -78,7 +79,7 @@ export default function StatsPage() {
 
     return (
         <div className="library-container">
-            <img className="library-text" src="/stats-text.svg" />
+            <div className="title-text">Your Stats</div>
             <div className="stats-container">
                 <div className="camera-wrapper">
                     <img src="/camera.svg" className="camera-body" alt="Canon Camera" />
@@ -245,7 +246,7 @@ export default function StatsPage() {
                         onClick={runSimulation}
                         disabled={simulating}
                     >
-                        {simulating ? "⏳ Simulating..." : "⚡ Simulate activity"}
+                        {simulating ? "Simulating..." : " Simulate activity"}
                     </button>
                     {simulating && <p style={{ fontSize: "0.8vw", color: "#c4ac86" }}>Generating live data...</p>}
                 </div>

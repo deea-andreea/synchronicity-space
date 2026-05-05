@@ -8,8 +8,11 @@ export default defineConfig({
     setupFiles: "./src/setupTests.ts",
 
     exclude: [
-      "tests/**", // ✅ ignore Playwright folder
+      "tests/**", 
       "node_modules/**"
     ],
   },
 });
+
+export const API_IP = "170.20.10.3"; 
+export const API_BASE_URL = `http://${API_IP}:3000`;

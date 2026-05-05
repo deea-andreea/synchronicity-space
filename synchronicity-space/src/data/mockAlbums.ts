@@ -2,15 +2,15 @@ import type { Album } from "../models/Album";
 
 export const mockAlbums: Album[] = [
    {
-    id: "1ATL5uqDgopeOnvYm2o0Q3",
-    title: "Montage Of Heck: The Home Recordings (Deluxe Soundtrack)",
+    id: "1",
+    title: "Montage of Heck: The Home Recordings (Deluxe Soundtrack)",
     artist: "Kurt Cobain",
     genre: "Rock",
     year: 1977,
     coverImage: "/covers/asfalt.png",
     description: "A classic album with rich harmonies and emotional songwriting.",
     tracks: [
-      { id: "1-1", title: "Track 1", trackNumber: 1 },
+      { id: "1", title: "Track 1", trackNumber: 1 },
       { id: "1-2", title: "Track 2", trackNumber: 2 },
       { id: "1-3", title: "Track 3", trackNumber: 3 }
     ]

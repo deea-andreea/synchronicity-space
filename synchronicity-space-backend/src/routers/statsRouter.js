@@ -1,87 +1,68 @@
 import { Router } from "express";
-import { getAlbumById } from "../store/albumStore.js";
-import { getListeningHistory, getNoteHistory, recordListenEvent, recordNoteEvent } from "../store/statsStore.js";
+import { sequelize, Note, Listen } from "../models/index.js";
+import { Op } from "sequelize";
 
 export const statsRouter = Router();
 
-statsRouter.post("/listen", (req, res) => {
-    const { userId, albumId } = req.body;
-    if (!userId || !albumId) {
-        return res.status(422).json({ errors: ["userId and albumId are required"] });
+statsRouter.post("/listen", async (req, res) => {
+    const { userId, albumId, genre } = req.body;
+    try {
+        await Listen.create({ userId, albumId, genre: genre || "Unknown" });
+        res.status(201).json({ message: "Listen recorded" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-
-    const album = getAlbumById(albumId);
-    if (!album) return res.status(404).json({ error: "Album not found" });
-
-    recordListenEvent(userId, albumId, album.genre);
-    res.status(201).json({ message: "Listen event recorded" });
 });
 
-statsRouter.post("/note", (req, res) => {
-    console.log("posted note")
-    const { userId } = req.body;
-    if (!userId) return res.status(422).json({ errors: ["userId is required"] });
-    // recordNoteEvent(userId);
-    res.status(201).json({ message: "Note event recorded" });
-});
-
-statsRouter.get("/summary", (req, res) => {
+statsRouter.get("/summary", async (req, res) => {
     const { userId } = req.query;
-    const listeningHistory = getListeningHistory();
-    const noteHistory = getNoteHistory();
-    // console.log(noteHistory);
+    if (!userId) return res.status(400).json({ error: "userId is required" });
 
-    const userListens = userId
-        ? listeningHistory.filter(e => e.userId === userId)
-        : listeningHistory;
-    const userNotes = userId
-        ? noteHistory.filter(e => e.userId === userId)
-        : noteHistory;
+    try {
+        const genreCounts = await Listen.findAll({
+            where: { userId },
+            attributes: [
+                'genre',
+                [sequelize.fn('COUNT', sequelize.fn('DISTINCT', sequelize.col('albumId'))), 'count']
+            ],
+            group: ['genre'],
+            order: [[sequelize.literal('count'), 'DESC']],
+            limit: 5
+        });
 
-    const genreCounts = {};
-    const seenAlbums = new Set();
-    for (const entry of userListens) {
-        if (!seenAlbums.has(entry.albumId)) {
-            genreCounts[entry.genre] = (genreCounts[entry.genre] ?? 0) + 1;
-            seenAlbums.add(entry.albumId);
-        }
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const listens = await Listen.findAll({
+            where: { userId, listenDate: { [Op.gte]: sevenDaysAgo } }
+        });
+
+        const notes = await Note.findAll({
+            where: { userId, createdAt: { [Op.gte]: sevenDaysAgo } }
+        });
+
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const weekStats = dayNames.map((day, index) => {
+            const dailyListensRows = listens.filter(l => new Date(l.listenDate).getDay() === index);
+            const uniqueAlbumsThisDay = new Set(dailyListensRows.map(l => l.albumId)).size;
+            
+            const dailyNotes = notes.filter(n => new Date(n.createdAt).getDay() === index).length;
+            
+            return {
+                weekday: day,
+                albums: uniqueAlbumsThisDay,
+                notes: dailyNotes
+            };
+        });
+
+        res.json({
+            topGenres: genreCounts.map(g => ({ 
+                genre: g.genre, 
+                count: parseInt(g.get('count')) 
+            })),
+            weekStats
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-
-    const topGenres = Object.entries(genreCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([genre, count]) => ({ genre, count }));
-
-    const now = new Date();
-    const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-    const weekStats = days.map(day => ({ weekday: day, albums: 0, hours: 0, notes: 0 }));
-
-    const seenAlbums1 = new Set();
-    for (const entry of userListens) {
-        if (!seenAlbums1.has(entry.albumId)) {
-        const diffDays = (now - new Date(entry.date)) / (1000 * 60 * 60 * 24);
-        if (diffDays <= 7) {
-            const dayIndex = new Date(entry.date).getDay();
-            weekStats[dayIndex].albums += 1;
-            weekStats[dayIndex].hours += 0.75;
-        }
-        seenAlbums1.add(entry.albumId);
-    }
-    }
-    for (const entry of userNotes) {
-        const diffDays = (now - new Date(entry.date)) / (1000 * 60 * 60 * 24);
-        if (diffDays <= 7) {
-            const dayIndex = new Date(entry.date).getDay();
-            weekStats[dayIndex].notes += 1;
-        }
-    }
-    res.json({
-        totalListens: userListens.length,
-        totalNotes: userNotes.length,
-        topGenres,
-        weekStats,
-    });
-
-
-})
-
+});

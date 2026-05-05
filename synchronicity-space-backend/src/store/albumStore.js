@@ -1,7 +1,7 @@
 const ALBUMS = [
     {
         id: "1ATL5uqDgopeOnvYm2o0Q3",
-        title: "Montage Of Heck: The Home Recordings (Deluxe Soundtrack)",
+        title: "Montage of Heck: The Home Recordings (Deluxe Soundtrack)",
         artist: "Kurt Cobain",
         genre: "Rock",
         year: 1977,
