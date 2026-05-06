@@ -39,7 +39,7 @@ async function startServer() {
     console.log('Database connected successfully.');
 
     server.listen(PORT, '0.0.0.0', () => { 
-      console.log(`Server running on http://192.168.1.12:${PORT}`);
+      console.log(`Server running on http://192.168.50.62:${PORT}`);
     });
   } catch (error) {
     console.error('Unable to connect to the database:', error);

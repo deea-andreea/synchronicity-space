@@ -12,7 +12,7 @@ export default{
         defaultValue: Sequelize.UUIDV4
       },
       userId: {
-        type: Sequelize.STRING,
+        type: Sequelize.UUID,
         allowNull: false,
       },
       trackId: {

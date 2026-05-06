@@ -11,8 +11,10 @@ import HomePage from "./pages/HomePage";
 import { SpotifyProvider } from "./pages/Spotify";
 import StatsPage from "./pages/StatsPage";
 import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 import ListeningSpacePage from "./pages/ListeningSpacePage";
 export const API_BASE_URL = `http://${window.location.hostname}:3000`;
+import { getCookie } from "./utils/cookies";
 
 
 
@@ -37,17 +39,14 @@ export default function App() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // 1. Fetch all albums + tracks from DB
         const albRes = await fetch(`${API_BASE_URL}/albums`);
         const albumsFromDb = await albRes.json();
         setLibraryAlbums(albumsFromDb);
 
-        // 2. Fetch users to set the "active" session
         const userRes = await fetch(`${API_BASE_URL}/users`);
         const usersFromDb = await userRes.json();
         
-        // Find your specific user or default to the first one
-        const activeUser = usersFromDb.find((u: any) => u.username === "YourUsername") || usersFromDb[0];
+        const activeUser = usersFromDb.find((u: any) => u.id === getCookie("active_user_id")) || usersFromDb[0];
         setCurrentUser(activeUser);
       } catch (err) {
         console.error("Database connection failed:", err);
@@ -105,6 +104,12 @@ export default function App() {
             path="login"
             element={
               <LoginPage />
+            }
+          />
+          <Route
+            path="register"
+            element={
+              <RegisterPage />
             }
           />
           <Route

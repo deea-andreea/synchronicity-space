@@ -16,15 +16,18 @@ export const User = sequelize.define('User', {
         type: DataTypes.STRING,
         allowNull: false,
     },
+    avatar: {
+        type: DataTypes.STRING
+    }
     // spotifyId: { type: DataTypes.STRING, unique: true },
     // accessToken: { type: DataTypes.TEXT },
     // refreshToken: { type: DataTypes.TEXT },
     
 }, {
-  timestamps: false // <--- ADD THIS HERE TOO
+  timestamps: false 
 });
 
 User.beforeCreate(async (user) => {
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(user.password, salt);
+    // const salt = await bcrypt.genSalt(10);
+    // user.password = await bcrypt.hash(user.password, salt);
 });

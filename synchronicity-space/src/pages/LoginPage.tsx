@@ -2,28 +2,24 @@ import { Link, useNavigate } from "react-router-dom";
 import "./LoginPage.css";
 import { mockUsers } from "../data/mockUsers";
 import { useState } from "react";
+import {login} from "../api/authApi"
 
-export default function PresentationPage() {
+export default function LoginPage() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({ identifier: "", password: "" });
     const [loginError, setLoginError] = useState("");
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoginError(""); 
-        const user = mockUsers.find(
-            (u) =>
-                (u.email === formData.identifier || u.name === formData.identifier) &&
-                u.password === formData.password 
-        );
-
-        if (user) {
-            document.cookie = `active_user_id=${user.id}; path=/; max-age=3600`;
+        try {
+            const response = await login({username: formData.identifier, password: formData.password});
+            document.cookie = `active_user_id=${response.id}; path=/; max-age=3600`;
             document.cookie = `is_logged_in=true; path=/`;
 
-            navigate("/library");
-        } else {
-            setLoginError("Invalid username or password.");
+            navigate("/home");
+        } catch(err) {
+
         }
     };
 

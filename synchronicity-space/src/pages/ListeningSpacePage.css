@@ -1,8 +1,8 @@
 :root {
   /* Brighter Retro Palette */
-  --retro-walnut: #b79876; 
-  --retro-olive: #b79876;
-  --retro-cream: #b79876;
+  --retro-walnut: #611f1fac; 
+  --retro-olive: #611f1fac;
+  --retro-cream: #611f1fac;
   --room-depth: 1200px; 
 }
 
@@ -20,13 +20,28 @@
 }
 
 .retro-overlay {
-  position: absolute;
+  /* position: absolute;
   inset: 0;
   z-index: 10;
   pointer-events: none;
-  /* Reduced opacity so it doesn't black out the room */
-  background: radial-gradient(circle at 50% 30%, transparent 40%, rgba(0,0,0,0.6) 100%);
-  opacity: 0.5;
+  
+  background: radial-gradient(circle at 50% 30%, transparent 10%, rgb(0, 0, 0) 100%);
+  opacity: 0.5; */
+  position: fixed; /* Covers the whole viewport */
+  inset: 0;
+  z-index: 9999; /* Make sure it stays on top */
+  pointer-events: none; /* Allows you to click things underneath */
+  
+  /* The Grain: SVG noise */
+  /* background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"); */
+ background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  
+  /* FIX: This makes the noise "burn" into the background instead of sitting on top like a fog */
+  mix-blend-mode: multiply; 
+  opacity: 50%; 
+  /* background: radial-gradient(circle at 50% 30%, transparent 0%, rgb(0, 0, 0) 100%); */
+  
+  backdrop-filter: blur(3px);
 }
 
 .room-wrapper {
@@ -49,9 +64,9 @@
   background-color: var(--retro-cream);
   /* Pushing it back slightly less to ensure it renders */
   transform: translateZ(calc(var(--room-depth) * -1));
-  box-shadow: inset 0 0 100px rgba(0,0,0,0.2);
-   background-image: 
-    url("https://transparenttextures.com/patterns/kinda-jean.png");
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.462);
+   /* background-image: 
+    url("https://transparenttextures.com/patterns/kinda-jean.png"); */
 }
 
 /* --- THE HUGE FLOOR --- */
@@ -61,10 +76,10 @@
   bottom: 0;
   transform-origin: bottom;
   transform: rotateX(90deg);
-  background: #2b1a12;
-  opacity: 20%;
+  background: #401a10;
+  opacity: 15%;
   background-image: 
-    linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 90%),
+    linear-gradient(to top, rgb(0, 0, 0) 0%, transparent 90%),
     url("https://transparenttextures.com/patterns/tileable-wood-colored.png");
 }
 
@@ -122,4 +137,31 @@
   height: 60%;
   background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 80%);
   filter: blur(40px);
+}
+
+.couch {
+  width: 35vw;
+  height: var(--room-depth);
+  position: relative;
+  bottom: 8vw;
+  right:3vw
+}
+.plant {
+  width: 10vw;
+  height: var(--room-depth);
+  position: relative;
+  bottom: 12vw;
+  right:43vw
+}
+.rug {
+  width: 30vw; 
+  position: absolute;
+  
+  bottom: 20%;
+  right: 40%;
+  
+  transform-origin: bottom;
+  transform: translateX(-50%) rotateX(90deg) rotateZ(90deg) translateZ(2px);
+
+  filter: drop-shadow(0 0 10px rgba(0,0,0,0.3));
 }
