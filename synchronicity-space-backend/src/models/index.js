@@ -8,6 +8,7 @@ import { Track } from './Track.js';
 import { Listen } from './Listen.js';
 import { Role } from './Role.js';
 import { Permission } from './Permission.js';
+import { Friendship } from './Friendship.js';
 
 User.hasMany(Note, { foreignKey: 'userId' });
 Note.belongsTo(User, { foreignKey: 'userId' });
@@ -23,5 +24,15 @@ Permission.belongsToMany(Role, { through: 'RolePermissions' });
 
 User.belongsTo(Role, { foreignKey: 'roleId' });
 Role.hasMany(User, { foreignKey: 'roleId' });
+
+User.belongsToMany(User, { 
+  as: 'Friends', 
+  through: {
+    model: Friendship, 
+    timestamps:false
+  },
+  foreignKey: 'userId', 
+  otherKey: 'friendId' 
+});
 
 export { sequelize, User, Note, Album, Track, Listen, Role, Permission };

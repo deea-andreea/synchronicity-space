@@ -2,23 +2,26 @@ import { Link, useNavigate } from "react-router-dom";
 import "./LoginPage.css";
 import { mockUsers } from "../data/mockUsers";
 import { useState } from "react";
-import {login} from "../api/authApi"
+import { login } from "../api/authApi"
 
-export default function LoginPage() {
+export default function LoginPage({setCurrentUser}: {setCurrentUser: React.Dispatch<React.SetStateAction<any>>}) {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({ identifier: "", password: "" });
     const [loginError, setLoginError] = useState("");
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoginError(""); 
+        setLoginError("");
         try {
-            const response = await login({username: formData.identifier, password: formData.password});
+            const response = await login({ username: formData.identifier, password: formData.password });
             document.cookie = `active_user_id=${response.id}; path=/; max-age=3600`;
+            console.log(`active_user_id=${response.id}; path=/; max-age=3600`);
             document.cookie = `is_logged_in=true; path=/`;
 
+            setCurrentUser(response);
+
             navigate("/home");
-        } catch(err) {
+        } catch (err) {
 
         }
     };
@@ -40,10 +43,10 @@ export default function LoginPage() {
                     >
                         {loginError && <div className="auth-error-banner">{loginError}</div>}
                         <div className="input-group">
-                            <input type="text" placeholder="Username or e-mail address" onChange={(e) => setFormData({...formData, identifier: e.target.value})} required/>
+                            <input type="text" placeholder="Username or e-mail address" onChange={(e) => setFormData({ ...formData, identifier: e.target.value })} required />
                         </div>
                         <div className="input-group">
-                            <input type="password" placeholder="Password" onChange={(e) => setFormData({...formData, password: e.target.value})} required/>
+                            <input type="password" placeholder="Password" onChange={(e) => setFormData({ ...formData, password: e.target.value })} required />
                             <Link to="/forgot" className="forgot-link">Forgot password?</Link>
                         </div>
 

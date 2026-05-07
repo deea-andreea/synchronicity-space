@@ -28,3 +28,17 @@ export async function login(credentials: object) {
 
     return response.json();
 }
+
+export async function getFriends(userId: string | number) {
+    const response = await fetch(`${API_BASE_URL}/auth/friends/${userId}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch friends");
+    }
+
+    return response.json(); 
+}

@@ -73,7 +73,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum, currentUser
   const [isOffline, setIsOffline] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isSyncingRef = useRef(false);
-
+  console.log(currentUser);
   const stopPolling = () => {
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
@@ -372,6 +372,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum, currentUser
 
   return (
     <div className="container">
+    <div>{currentUser?.username}</div>
       <main className="content">
         <div className="right-section">
           <div className="vinyl-section">

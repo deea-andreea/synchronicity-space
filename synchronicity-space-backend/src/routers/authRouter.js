@@ -35,7 +35,7 @@ authRouter.post("/login", async (req, res) => {
 
 authRouter.post("/register", async (req, res) => {
     const { username, password } = req.body;
-    
+
 
     try {
         const userRole = await Role.findOne({ where: { name: 'user' } });
@@ -53,4 +53,11 @@ authRouter.post("/register", async (req, res) => {
         }
         res.status(500).json({ error: err.message });
     }
+});
+
+authRouter.get("/friends/:userId", async (req, res) => {
+    const user = await User.findByPk(req.params.userId, {
+        include: [{ model: User, as: 'Friends' }]
+    });
+    res.json(user.Friends);
 });

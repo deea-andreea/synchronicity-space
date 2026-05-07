@@ -48,6 +48,7 @@ export default function App() {
         
         const activeUser = usersFromDb.find((u: any) => u.id === getCookie("active_user_id")) || usersFromDb[0];
         setCurrentUser(activeUser);
+        console.log(activeUser)
       } catch (err) {
         console.error("Database connection failed:", err);
       }
@@ -103,7 +104,7 @@ export default function App() {
           <Route
             path="login"
             element={
-              <LoginPage />
+              <LoginPage setCurrentUser={setCurrentUser}/>
             }
           />
           <Route
@@ -115,7 +116,8 @@ export default function App() {
           <Route
             path="listening-space"
             element={
-              <ListeningSpacePage />
+              <ListeningSpacePage 
+              currentUser={currentUser}/>
             }
           />
 

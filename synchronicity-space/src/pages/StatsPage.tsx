@@ -11,7 +11,7 @@ export default function StatsPage({currentUser}: {currentUser: any}) {
     const [loading, setLoading] = useState(true);
     const currentUserId = "1";
     const [view, setView] = useState<"genres-tab" | "genres-viz" | "weekly-tab" | "weekly-viz">("genres-tab");
-    console.log(currentUser)
+    console.log(currentUser?.id);
     const maxGenreCount = Math.max(...topGenres.map(g => g.count), 1);
     const max = Math.max(
         ...weekStats.map(s => s.albums),
@@ -23,14 +23,14 @@ export default function StatsPage({currentUser}: {currentUser: any}) {
 
     useEffect(() => {
         setLoading(true);
-        fetchStatsSummary(currentUser.id) 
+        fetchStatsSummary(currentUser?.id) 
             .then(data => {
                 setTopGenres(data.topGenres || []);
                 setWeekStats(data.weekStats || []);
             })
             .catch(err => console.error("Stats Error:", err))
             .finally(() => setLoading(false));
-    }, [currentUser.id]);
+    }, [currentUser?.id]);
 
     const handleSimulationClick = async () => {
         // Generate fake listening events on the backend
