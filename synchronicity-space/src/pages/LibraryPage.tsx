@@ -89,7 +89,7 @@ export default function LibraryPage({ albums, onRemove, onPlayAlbum }: LibraryPr
             >
               <div className="album-image">
                 <img src="/vinyl.png" className="vinyl-record" alt="vinyl" />
-                <img src={album.coverImage} className="album-cover" alt={album.title} />
+                <img src={album.coverURL} className="album-cover" alt={album.title} />
               </div>
               <div className="album-card-text">
                 <h3 >{album.title}</h3>

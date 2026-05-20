@@ -1,6 +1,6 @@
 .title-text {
     font-family: 'Press Start 2P';
-    font-size: 4vw;
+    font-size: 3vw;
     color:rgb(124, 151, 134);
     text-shadow: 5px 5px 6px rgba(0, 0, 0, 0.856);
     -webkit-text-stroke: 1px #0d3a12;
@@ -121,7 +121,8 @@
     background: none;
     border:none;
     font-family: 'Press Start 2P';
-    font-size: 20px;
+    font-size: 2vw;
+    word-spacing: 1px;
     line-height: 90%;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
     -webkit-text-stroke: 0.5px #3f1313;

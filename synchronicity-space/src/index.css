@@ -40,7 +40,7 @@
 
 #root {
   max-width: 100%;
-  margin: 0 auto;
+  /* margin: 0 auto; */
   text-align: center;
   min-height: 100svh;
   display: flex;
@@ -78,12 +78,12 @@ html::after {
   opacity: 1;
 }
 
-html {
+html, body {
   height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
-body {
-}
 
 h1,
 h2 {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./HomePage.css";
 import type { Album } from "../models/Album";
 import { useSpotify } from "./Spotify"; // Your context hook
@@ -26,6 +27,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum, currentUser
   const [noteError, setNoteError] = useState("");
 
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   // const { player, deviceId } = useSpotify();
   const player = null;
@@ -35,7 +37,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum, currentUser
   const quickPicks = albums.slice(0, 3);
 
   const handleAlbumSelect = async (album: Album) => {
-
+    console.log(album?.coverURL);
     onPlayAlbum(album);
     setCurrentTrackIndex(0);
     console.log(album)
@@ -57,7 +59,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum, currentUser
   };
 
   const handleNextTrack = () => {
-    if (playingAlbum && currentTrackIndex < playingAlbum.tracks.length - 1) {
+    if (playingAlbum && currentTrackIndex < playingAlbum.Tracks.length - 1) {
       setCurrentTrackIndex(prev => prev + 1);
       player?.nextTrack();
     }
@@ -372,7 +374,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum, currentUser
 
   return (
     <div className="container">
-    <div>{currentUser?.username}</div>
+      <div>{currentUser?.username}</div>
       <main className="content">
         <div className="right-section">
           <div className="vinyl-section">
@@ -383,7 +385,7 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum, currentUser
               {playingAlbum && (
                 <div>
                   <img src="/vinyl.svg" alt="Vinyl" className="disk-image" />
-                  <img src={playingAlbum.coverImage} className="vinyl-label" alt="label" />
+                  <img src={playingAlbum.coverURL} className="vinyl-label" alt="label" />
                 </div>
               )}
             </div>
@@ -408,7 +410,8 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum, currentUser
                       className="quick-pick-card"
                       onClick={() => handleAlbumSelect(album)}
                     >
-                      <img src={album.coverImage} alt={album.title} />
+                      <img src={album.coverURL} alt={album.title} />
+                      
                       <div className="quick-pick-info">
                         <h3>{album.title}</h3>
                         <p>{album.artist}</p>
@@ -462,7 +465,9 @@ export default function HomePage({ albums, activeAlbum, onPlayAlbum, currentUser
                 <h2>library</h2>
               </div>
             </div>
-            <div className="browse-button">
+            <div className="browse-button"
+              onClick={() => navigate("/listening-space")} // Add this line
+              style={{ cursor: 'pointer' }}>
               <img className="headphones-img" src="../headphones2.svg" />
               <div>
                 <p>start</p>

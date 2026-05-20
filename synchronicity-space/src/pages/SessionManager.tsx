@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import './SessionManager.css';
 
-const socket = io("http://172.20.10.3:3000");
+const socket = io(`https://${window.location.hostname}:3000`);
 
 export default function SessionManager({ currentUser, friendsList }) {
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);

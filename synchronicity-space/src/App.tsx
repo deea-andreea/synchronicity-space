@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
 import LibraryPage from "./pages/LibraryPage";
 import StorePage from "./pages/StorePage";
 import PresentationPage from "./pages/PresentationPage";
-import { mockAlbums } from "./data/mockAlbums"; // Import only once here!
+import { mockAlbums } from "./data/mockAlbums"; 
 import type { Album } from "./models/Album";
 import type { Track } from "./models/Track";
 import HomePage from "./pages/HomePage";
@@ -13,10 +13,11 @@ import StatsPage from "./pages/StatsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ListeningSpacePage from "./pages/ListeningSpacePage";
-export const API_BASE_URL = `http://${window.location.hostname}:3000`;
+import ForgotPasswordPage from "./pages/ForgotPasswordPage"; 
+import ResetPasswordPage from "./pages/ResetPasswordPage"; 
+import { jwtDecode } from "jwt-decode";
+export const API_BASE_URL = `https://${window.location.hostname}:3000`;
 import { getCookie } from "./utils/cookies";
-
-
 
 export const playSpotifyAlbum = async (token: string, deviceId: string, albumUri: string) => {
   console.log("Using Token:", token);
@@ -31,10 +32,10 @@ export const playSpotifyAlbum = async (token: string, deviceId: string, albumUri
 };
 
 export default function App() {
-
- const [libraryAlbums, setLibraryAlbums] = useState<Album[]>([]);
+  const [libraryAlbums, setLibraryAlbums] = useState<Album[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [activeAlbum, setActiveAlbum] = useState<Album | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const loadData = async () => {
@@ -43,19 +44,78 @@ export default function App() {
         const albumsFromDb = await albRes.json();
         setLibraryAlbums(albumsFromDb);
 
-        const userRes = await fetch(`${API_BASE_URL}/users`);
-        const usersFromDb = await userRes.json();
-        
-        const activeUser = usersFromDb.find((u: any) => u.id === getCookie("active_user_id")) || usersFromDb[0];
-        setCurrentUser(activeUser);
-        console.log(activeUser)
+        const savedToken = localStorage.getItem("authToken");
+
+        if (savedToken) {
+          try {
+            const decodedUser: any = jwtDecode(savedToken);
+            if (decodedUser.exp * 1000 > Date.now()) {
+              setCurrentUser({
+                id: decodedUser.id,
+                username: decodedUser.username,
+                role: decodedUser.roleName,
+                permissions: decodedUser.permissions
+              });
+              setIsLoading(false);
+              return;
+            }
+          } catch (tokenErr) {
+            console.error("Corrupted session token found:", tokenErr);
+            localStorage.removeItem("authToken");
+          }
+        }
+
+        setCurrentUser(null);
       } catch (err) {
         console.error("Database connection failed:", err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (isLoading || !currentUser) return;
+
+    let inactivityTimer: NodeJS.Timeout;
+
+    const logoutUserDueToInactivity = () => {
+      console.log("Session expired due to inactivity.");
+      setCurrentUser(null);
+      localStorage.removeItem("authToken");
+      document.cookie = "active_user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      alert("You have been logged out due to inactivity.");
+      window.location.href = "/login";
+    };
+
+    const resetInactivityTimer = () => {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        logoutUserDueToInactivity();
+      }, 1 * 60 * 1000);
+    };
+
+    window.addEventListener("load", resetInactivityTimer);
+    window.addEventListener("mousemove", resetInactivityTimer);
+    window.addEventListener("mousedown", resetInactivityTimer);
+    window.addEventListener("click", resetInactivityTimer);
+    window.addEventListener("keydown", resetInactivityTimer);
+    window.addEventListener("scroll", resetInactivityTimer);
+
+    resetInactivityTimer();
+
+    return () => {
+      clearTimeout(inactivityTimer);
+      window.removeEventListener("load", resetInactivityTimer);
+      window.removeEventListener("mousemove", resetInactivityTimer);
+      window.removeEventListener("mousedown", resetInactivityTimer);
+      window.removeEventListener("click", resetInactivityTimer);
+      window.removeEventListener("keydown", resetInactivityTimer);
+      window.removeEventListener("scroll", resetInactivityTimer);
+    };
+  }, [currentUser, isLoading]);
 
   const handlePlayAlbum = (album: Album) => {
     setActiveAlbum(album);
@@ -65,65 +125,80 @@ export default function App() {
     setLibraryAlbums(prev => prev.filter(a => a.id !== id));
   };
 
+  const hasFrontendPermission = (permissionName: string) => {
+    return currentUser?.permissions?.includes(permissionName);
+  };
 
+  if (isLoading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", background: "#121212", color: "#fff" }}>
+        <h3>Loading Synchronicity Session...</h3>
+      </div>
+    );
+  }
 
   return (
-    // <SpotifyProvider token="BQCh0fSs1LhN4Sy70tJ573EstDSYtCZJAm8Cf8SVO_kbbVWAtwK9w5iWM40HUYFcw-MdBFKQy1St6U5JS6jT8j-4K64wTopP6uC6azIabzCPGN_X8YuodTKBysjF9pblGu2-lelZAyltzqdhkCNhZ1F3GqCKYBozg0qtUNSCE24uKXXwOyhq4sUbWBn7V5VkIL_mAqUnnFwYYTpZauXLngeWOx_QJf5uwLXy8KdM11tRT7CEN64l0M6yzd6-GwtEed_uDvdkcg">
     <Router>
       <Routes>
         <Route path="/" element={<Layout />}>
-          <Route index element={<PresentationPage />} />\
+          <Route index element={<PresentationPage />} />
+          
           <Route
             path="library"
-            index element={<LibraryPage albums={libraryAlbums} onRemove={handleRemove} onPlayAlbum={handlePlayAlbum} />} />
-          {/* <Route
-            path="store"
             element={
-              <StorePage
-                albums={storeAlbums}
-                onOrder={handleOrder}
-                onUpdateTracks={handleUpdateTracks}
-              />
-            }
-          /> */}
+              hasFrontendPermission("view_library") ? (
+                <LibraryPage albums={libraryAlbums} onRemove={handleRemove} onPlayAlbum={handlePlayAlbum} />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            } 
+          />
+
           <Route
             path="home"
             element={
-              <HomePage
-                albums={libraryAlbums}
-                activeAlbum={activeAlbum}
-                onPlayAlbum={handlePlayAlbum}
-                currentUser={currentUser} />
-            } />
+              hasFrontendPermission("play_music") ? (
+                <HomePage
+                  albums={libraryAlbums}
+                  activeAlbum={activeAlbum}
+                  onPlayAlbum={handlePlayAlbum}
+                  currentUser={currentUser} />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            } 
+          />
+
           <Route
             path="stats"
             element={
-              <StatsPage
-              currentUser={currentUser} />
-            } />
-          <Route
-            path="login"
-            element={
-              <LoginPage setCurrentUser={setCurrentUser}/>
-            }
+              hasFrontendPermission("view_stats") ? (
+                <StatsPage currentUser={currentUser} />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            } 
           />
-          <Route
-            path="register"
-            element={
-              <RegisterPage />
-            }
-          />
+
+          <Route path="login" element={<LoginPage setCurrentUser={setCurrentUser}/>} />
+          <Route path="register" element={<RegisterPage />} />
+          
+          <Route path="forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="reset-password" element={<ResetPasswordPage />} />
+
           <Route
             path="listening-space"
             element={
-              <ListeningSpacePage 
-              currentUser={currentUser}/>
+              hasFrontendPermission("navigate_listening_space") ? (
+                <ListeningSpacePage currentUser={currentUser}/>
+              ) : (
+                <Navigate to="/home" replace /> 
+              )
             }
           />
 
         </Route>
       </Routes>
     </Router>
-    // </SpotifyProvider>
   );
 }

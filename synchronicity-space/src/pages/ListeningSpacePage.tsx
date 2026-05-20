@@ -1,30 +1,46 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './ListeningSpacePage.css';
 import { getFriends } from '../api/authApi';
 import { io } from 'socket.io-client';
 
-const socket = io("http://172.20.10.3:3000");
+const socket = io(`https://${window.location.hostname}:3000`);
 
 export default function ListeningSpacePage({ currentUser }: { currentUser: any }) {
   const [friends, setFriends] = useState<any[]>([]);
   const [showManager, setShowManager] = useState(false);
-  const [isSessionActive, setIsSessionActive] = useState(false);
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
-  const [messages, setMessages] = useState<any[]>([]);
+
   const [input, setInput] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const [currentSessionId, setCurrentSessionId] = useState<string>("");
 
-  // Auto-scroll to bottom of chat
+  const [messages, setMessages] = useState<any[]>(() => {
+    const saved = localStorage.getItem('chat_messages');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('chat_messages', JSON.stringify(messages));
+  }, [messages]);
+
+  const [currentSessionId, setCurrentSessionId] = useState<string>(() => {
+    return localStorage.getItem('active_session_id') || "";
+  });
+
+  const [isSessionActive, setIsSessionActive] = useState<boolean>(() => {
+    return !!localStorage.getItem('active_session_id');
+  });
+
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Load Friends
   useEffect(() => {
     if (currentUser?.id) {
       getFriends(currentUser.id)
@@ -33,12 +49,11 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
     }
   }, [currentUser?.id]);
 
-  // Socket Logic
   useEffect(() => {
-    const sessionId = `session-${currentUser?.id}`;
-
     if (isSessionActive && currentSessionId) {
-      socket.emit("join_session", sessionId);
+      console.log("Re-joining session room:", currentSessionId);
+      socket.emit("join_session", currentSessionId);
+
       socket.on("receive_message", (msg) => {
         setMessages((prev) => [...prev, msg]);
       });
@@ -47,78 +62,109 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
     return () => {
       socket.off("receive_message");
     };
-  }, [isSessionActive, currentUser?.id]);
+  }, [isSessionActive, currentSessionId]);
 
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    console.log("Listening for invites for user:", currentUser.username);
+
+    socket.on("receive_invite", (invite) => {
+      console.log("!!! INVITE RECEIVED ON CLIENT:", invite); // DEBUG LOG
+      setActiveInvite(invite);
+    });
+
+    return () => {
+      console.log("Cleaning up invite listener");
+      socket.off("receive_invite");
+    };
+  }, [currentUser?.id]);
 
   const sendMessage = (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  console.log("Current Session ID:", currentSessionId);
-  console.log("Input text:", input);
+    e.preventDefault();
 
-  if (!input.trim()) return;
-  if (!currentSessionId) {
-    console.error("No Session ID found! You aren't in a room.");
-    return;
-  }
+    console.log("Current Session ID:", currentSessionId);
+    console.log("Input text:", input);
 
-  const msgData = {
-    senderId: currentUser.id,
-    senderName: currentUser.username,
-    sessionId: currentSessionId, 
-    text: input,
+    if (!input.trim()) return;
+    if (!currentSessionId) {
+      console.error("No Session ID found! You aren't in a room.");
+      return;
+    }
+
+    const msgData = {
+      senderId: currentUser.id,
+      senderName: currentUser.username,
+      sessionId: currentSessionId,
+      text: input,
+    };
+
+    socket.emit("send_message", msgData);
+    setInput("");
   };
-
-  socket.emit("send_message", msgData);
-  setInput("");
-};
 
   const [activeInvite, setActiveInvite] = useState<any>(null);
 
   const handleStartSession = () => {
     const sessionId = `session-${currentUser.id}`;
 
-    // 1. Tell the server to invite the selected friends
+    localStorage.setItem('active_session_id', sessionId);
+
     socket.emit("send_invite", {
       senderName: currentUser.username,
       friendIds: selectedFriends,
       sessionId: sessionId
     });
 
-    // 2. Open the chat for yourself
     setCurrentSessionId(sessionId);
     setIsSessionActive(true);
+    setSelectedFriends([])
+  };
+
+  const handleAcceptInvite = () => {
+    const targetSessionId = activeInvite.sessionId;
+
+    localStorage.setItem('active_session_id', targetSessionId);
+
+    socket.emit("join_session", targetSessionId);
+    setMessages([]);
+    setCurrentSessionId(targetSessionId);
+    setIsSessionActive(true);
+    setShowManager(true);
+    setActiveInvite(null);
+  };
+
+  const handleStopSession = () => {
+    if (currentSessionId) {
+      socket.emit("leave_session", currentSessionId); // Optional: tell server you're leaving
+    }
+
+    localStorage.removeItem('active_session_id');
+    setCurrentSessionId("");
+    setIsSessionActive(false);
+    setMessages([]);
   };
 
   useEffect(() => {
-    // Register this user for private messages
-    if (currentUser?.id) {
+    if (!currentUser?.id) return;
+
+    const onConnect = () => {
+      console.log("Socket connected, registering user:", currentUser.id);
       socket.emit("register_user", currentUser.id);
+    };
+
+    if (socket.connected) {
+      onConnect();
     }
 
-    // Listen for incoming invites
-    socket.on("receive_invite", (invite) => {
-      setActiveInvite(invite);
-      // Optional: Auto-hide after 10 seconds
-      // setTimeout(() => setActiveInvite(null), 10000);
-    });
+    socket.on("connect", onConnect);
 
-    return () => { socket.off("receive_invite"); };
+    return () => {
+      socket.off("connect", onConnect);
+    };
   }, [currentUser?.id]);
 
-  const handleAcceptInvite = () => {
-  const targetSessionId = activeInvite.sessionId; 
-  
-  console.log("Accepting invite. Joining room:", targetSessionId);
-
-  socket.emit("join_session", targetSessionId);
-
-  setMessages([]); 
-  setCurrentSessionId(targetSessionId); 
-  setIsSessionActive(true);
-  setShowManager(true);
-  setActiveInvite(null); 
-};
   return (
     <div className="listening-container">
       {activeInvite && (
@@ -133,28 +179,30 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
         </div>
       )}
       <button className="manage-sessions-btn" onClick={() => setShowManager(!showManager)}>
-        {showManager ? "✖" : "Manage Sessions"}
+        {showManager ? "✖" : "chat"}
       </button>
 
-      {/* THE BLACK CHAT RECTANGLE */}
       {showManager && (
         <div className="retro-chat-box">
           {!isSessionActive ? (
-            /* PHASE 1: FRIEND SELECTION */
             <div className="setup-view">
               <h3>SELECT FRIENDS</h3>
               <div className="friends-list">
-                {friends.map(f => (
-                  <div
-                    key={f.id}
-                    className={`friend-option ${selectedFriends.includes(f.id) ? 'active' : ''}`}
-                    onClick={() => setSelectedFriends(prev =>
-                      prev.includes(f.id) ? prev.filter(id => id !== f.id) : [...prev, f.id]
-                    )}
-                  >
-                    {f.username}
-                  </div>
-                ))}
+                {friends.map(f => {
+                  const isSelected = selectedFriends.includes(f.id);
+                  return (
+                    <div
+                      key={f.id}
+                      className={`friend-option ${isSelected ? 'selected' : ''}`}
+                      onClick={() => setSelectedFriends(prev =>
+                        isSelected ? prev.filter(id => id !== f.id) : [...prev, f.id]
+                      )}
+                    >
+                      <span className="checkbox">{isSelected ? '[X]' : '[ ]'}</span>
+                      <span className="username">{f.username}</span>
+                    </div>
+                  );
+                })}
               </div>
               <button
                 className="start-session-btn"
@@ -165,8 +213,10 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
               </button>
             </div>
           ) : (
-            /* PHASE 2: THE CHAT (Matching your image) */
             <div className="chat-view">
+              <button className="stop-session-btn" onClick={handleStopSession}>
+                EXIT SESSION
+              </button>
               <div className="message-history">
                 {messages.map((m, i) => (
                   <div key={i} className={`message-entry ${m.senderId === currentUser.id ? 'me' : 'them'}`}>
@@ -193,8 +243,10 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
         </div>
       )}
 
-      {/* ROOM STAGE */}
       <div className="room-stage">
+        <button className="back-home-btn" onClick={() => navigate("/home")}>
+          ← BACK TO HOME
+        </button>
         <div className="retro-overlay"></div>
         <div className="room-wrapper">
           <div className="wall back-wall"><div className="ambient-glow"></div></div>

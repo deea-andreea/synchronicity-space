@@ -175,16 +175,29 @@
 
 .manage-sessions-btn {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 13vh;
+    right: 5vw;
     z-index: 2000;
-    background: #ff00ff;
-    color: white;
+    color: rgb(0, 0, 0);
     border: none;
     padding: 10px 20px;
-    font-weight: bold;
     cursor: pointer;
-    box-shadow: 4px 4px 0px #000;
+}
+
+.manage-sessions-btn, .start-session-btn, .stop-session-btn, .join-btn, .ignore-btn {
+  background: none;
+  color: rgb(167, 167, 167);
+  border: 1px solid rgb(105, 105, 105);
+  font-family: 'Courier New', Courier, monospace;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 5px 10px;
+}
+
+.stop-session-btn {
+  align-self: flex-start;
+  font-size: 0.8rem;
+  margin-bottom: 10px;
 }
 
 /* Ensure the wrapper views take up full height of the black box */
@@ -306,16 +319,18 @@
 .close-chat-x:hover { opacity: 1; }
 
 .invite-notification {
-    position: fixed;
-    top: 20px;
-    right: 220px; /* To the left of the Manage button */
-    width: 280px;
-    background: #111;
-    border: 2px solid #00ffff; /* Cyan alert */
-    padding: 15px;
-    z-index: 3000;
-    box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
-    animation: slideIn 0.3s ease-out;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: black;
+  border-bottom: 2px solid white;
+  padding: 10px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 2000;
+  font-family: 'Courier New', Courier, monospace;
 }
 
 @keyframes slideIn {
@@ -330,11 +345,6 @@
     text-transform: lowercase;
 }
 
-.blink {
-    color: #00ffff;
-    animation: blinker 1s linear infinite;
-    margin-right: 5px;
-}
 
 @keyframes blinker {
     50% { opacity: 0; }
@@ -346,7 +356,7 @@
 }
 
 .join-btn {
-    background: #00ffff;
+    background: #697c4c;
     color: #000;
     border: none;
     padding: 5px 15px;
@@ -362,4 +372,25 @@
     padding: 5px 10px;
     cursor: pointer;
     font-size: 0.7rem;
+}
+
+.back-home-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 1000; /* Ensure it stays above the room elements */
+  background: #222;
+  color: #868686; /* Retro green */
+  border: 2px solid #8d8d8d;
+  padding: 8px 15px;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: bold;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.back-home-btn:hover {
+  background: #888888;
+  color: #000;
 }

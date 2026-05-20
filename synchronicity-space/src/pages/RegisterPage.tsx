@@ -7,6 +7,7 @@ export default function RegisterPage() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         username: "",
+        email:"",
         password: "",
         confirmPassword: ""
     });
@@ -15,7 +16,7 @@ export default function RegisterPage() {
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await register({ username:formData.username, password:formData.password });
+            await register({ username:formData.username, email: formData.email, password:formData.password });
             navigate("/login");
         } catch (err: any) {
             setError(err.message);
@@ -41,6 +42,14 @@ export default function RegisterPage() {
                                 type="text"
                                 placeholder="Username"
                                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div className="input-group">
+                            <input
+                                type="text"
+                                placeholder="Email"
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 required
                             />
                         </div>

@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "./PresentationPage.css";
 
 export default function PresentationPage() {
+  const navigate = useNavigate();
   return (
+    
     <div className="landing-wrapper">
 
       <main className="landing-content">
@@ -25,8 +28,8 @@ export default function PresentationPage() {
           </p>
 
           <div className="cta-buttons">
-            <Link to="/store" className="btn btn-red">Sign Up</Link>
-            <Link to="/store" className="btn btn-outline">Log In</Link>
+            <Link to="/register" className="btn btn-red" >Sign Up</Link>
+            <Link to="/login" className="btn btn-outline">Log In</Link>
           </div>
         </div>
       </main>

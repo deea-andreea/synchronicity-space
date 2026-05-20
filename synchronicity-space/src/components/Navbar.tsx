@@ -4,7 +4,10 @@ import './Navbar.css';
 export const Navbar = () => {
   return (
     <nav className="navbar">
-      <div className="logo">synchronicity<br/>space</div>
+      <div className="logo">synchronicity<br />space</div>
+      {/* <button className="menu-toggle" id="menu-toggle">
+        ☰
+      </button> */}
       <div className="nav-links">
         <NavLink to="/home" className="nav-item">Home</NavLink>
         <NavLink to="/library" className="nav-item">Library</NavLink>
