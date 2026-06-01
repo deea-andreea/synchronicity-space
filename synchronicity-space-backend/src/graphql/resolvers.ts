@@ -1,5 +1,5 @@
 import { getAllNotes, getNoteById, addNote, updateNote, deleteNote } from '../store/noteStore.js';
-import { NoteCreateSchema, NoteUpdateSchema } from '../models/note.js';
+import { NoteCreateSchema, NoteUpdateSchema } from '../models/Note.js';
 
 export const rootValue = {
   notes: ({ trackId, albumId, userId }: any) => {

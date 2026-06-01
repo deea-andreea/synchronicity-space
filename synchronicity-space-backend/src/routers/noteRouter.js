@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { NoteCreateSchema, NoteUpdateSchema} from "../models/note.js";
+import { NoteCreateSchema, NoteUpdateSchema} from "../models/Note.js";
 import {
   getAllNotes, getNoteById, addNote, updateNote, deleteNote
 } from "../store/noteStore.js";

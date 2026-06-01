@@ -18,7 +18,7 @@ jest.unstable_mockModule('../database.js', async () => {
   };
 });
 
-const { Note } = await import('../models/note.js');
+const { Note } = await import('../models/Note.js');
 const { User }  =await  import('../models/User.js');
 const { Album } = await import ('../models/Album.js');
 const { Track }  = await import('../models/Track.js');
