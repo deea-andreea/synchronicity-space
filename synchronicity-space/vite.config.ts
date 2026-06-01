@@ -3,21 +3,28 @@ import react from '@vitejs/plugin-react'
 import fs from 'fs'
 import path from 'path'
 
+const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+
+const serverConfig = isProduction
+  ? {
+      host: true,
+    }
+  : {
+      host: '0.0.0.0',
+      port: 5173,
+      https: {
+        key: fs.readFileSync(path.resolve(__dirname, '../synchronicity-space-backend/key.pem')),
+        cert: fs.readFileSync(path.resolve(__dirname, '../synchronicity-space-backend/cert.pem')),
+      },
+    };
+
 export default defineConfig({
   plugins: [react()],
-  server: {
-    host: '0.0.0.0',
-    port: 5173,
-    https: {
-      key: fs.readFileSync(path.resolve(__dirname, '../synchronicity-space-backend/key.pem')),
-      cert: fs.readFileSync(path.resolve(__dirname, '../synchronicity-space-backend/cert.pem')),
-    },
-  },
+  server: serverConfig,
   test: {
     environment: "jsdom",
     globals: true,
     setupFiles: "./src/setupTests.ts",
-
     exclude: [
       "tests/**", 
       "node_modules/**"
@@ -25,5 +32,6 @@ export default defineConfig({
   },
 });
 
-export const API_IP = "172.20.10.3"; 
-export const API_BASE_URL = `https://${API_IP}:3000`;
+export const API_BASE_URL = isProduction
+  ? (process.env.VITE_API_BASE_URL || 'https://synchronicity-space.onrender.com')
+  : `https://172.20.10.3:3000`; 
