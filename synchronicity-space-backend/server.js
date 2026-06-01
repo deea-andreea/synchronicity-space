@@ -1,5 +1,6 @@
 import app from "./src/app.js";
-import http from "http";
+import https from "https";
+import fs from "fs";
 import { sequelize } from './src/database.js';
 // import { WebSocketServer } from "ws";
 import { setBroadcast } from "./src/routers/generatorRouter.js";
@@ -16,12 +17,17 @@ const PORT = process.env.PORT || 3000;
 
 // app.all('/graphql', createHandler({schema, rootValue}))
 
-const server = http.createServer(app);
+const sslOptions = {
+    key: fs.readFileSync('./key.pem'),
+    cert: fs.readFileSync('./cert.pem')
+};
+
+const server = https.createServer(sslOptions, app);
 // const wss = new WebSocketServer({ server });
 
 const io = new Server(server, {
   cors: {
-    origin: "http://172.20.10.3:5173",
+    origin: [`https://172.20.10.3:5173`],
     methods: ["GET", "POST"]
   }
 })
@@ -44,7 +50,7 @@ setBroadcast((payload) => {
 //   console.log(' GraphQL API at http://localhost:3000/graphql');
 // })
 
-
+const userSocketMap = {};
 async function startServer() {
   try {
     await sequelize.sync({ alter: true });
@@ -54,23 +60,29 @@ async function startServer() {
 
     await connectNoSql();
     io.on("connection", (socket) => {
-      // 1. Private room for each user
       socket.on("register_user", (userId) => {
-        socket.join(`user-${userId}`);
-        console.log(`User ${userId} is ready for private invites`);
+        userSocketMap[userId] = socket.id;
+        console.log(`User ${userId} is now linked to socket ${socket.id}`);
       });
 
-      // 2. Handle Invites
       socket.on("send_invite", ({ senderName, friendIds, sessionId }) => {
-        friendIds.forEach(friendId => {
-          // Send only to the specific friend's private room
-          io.to(`user-${friendId}`).emit("receive_invite", {
-            senderName,
-            sessionId,
-            message: `${senderName} invited you to a session!`
-          });
+        console.log(`Invite from ${senderName} to friends:`, friendIds);
+        friendIds.forEach((friendId) => {
+          const targetSocketId = userSocketMap[friendId];
+          if (targetSocketId) {
+            console.log(`Sending invite to friend ${friendId} at socket ${targetSocketId}`);
+            io.to(targetSocketId).emit("receive_invite", {
+              message: `${senderName} invited you to a listening session!`,
+              sessionId: sessionId,
+              senderName: senderName
+            });
+          }
+          else {
+            console.log(`Friend ${friendId} is not online (no socket found)`);
+          }
         });
       });
+
       socket.on("send_message", (data) => {
         const { sessionId, text, senderId, senderName } = data;
 
@@ -88,10 +100,20 @@ async function startServer() {
         socket.join(sessionId);
         console.log(`Socket ${socket.id} joined room: ${sessionId}`);
       });
+
+      socket.on("disconnect", () => {
+        for (const userId in userSocketMap) {
+          if (userSocketMap[userId] === socket.id) {
+            console.log(`User ${userId} disconnected. Removing socket ${socket.id}`);
+            delete userSocketMap[userId];
+            break;
+          }
+        }
+      });
     });
 
     server.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running on http://172.20.10.3:${PORT}`);
+      console.log(`Server running on https://172.20.10.3:${PORT}`);
     });
 
   } catch (error) {

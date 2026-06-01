@@ -35,4 +35,4 @@ User.belongsToMany(User, {
   otherKey: 'friendId' 
 });
 
-export { sequelize, User, Note, Album, Track, Listen, Role, Permission };
+export { sequelize, User, Note, Album, Track, Listen, Role, Permission, Friendship };

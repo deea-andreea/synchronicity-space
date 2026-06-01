@@ -1,37 +1,28 @@
 import { jest } from '@jest/globals';
 
 jest.unstable_mockModule('../database.js', async () => {
-  const { Sequelize } = await import('sequelize');
-
-  class NoopConnectionManager {
-    initPools() {}
-    close() {}
-    connect() { return Promise.resolve({}); }
-    disconnect() { return Promise.resolve(); }
-    validate() { return true; }
-    getConnection() { return Promise.resolve({}); }
-    releaseConnection() {}
-  }
-
-  const seq = new Sequelize('db', 'user', 'pass', {
-    dialect: 'mysql',
-    logging: false,
-  });
-
-  seq.connectionManager = new NoopConnectionManager();
-
-  if (seq.dialect && seq.dialect.connectionManager) {
-    seq.dialect.connectionManager = new NoopConnectionManager();
-  }
-
-  return { sequelize: seq };
+  return {
+    sequelize: {
+      define: jest.fn((name, attributes, options = {}) => {
+        return {
+          rawAttributes: attributes,
+          options: options,
+          // Updated this line to return plural names for the tests
+          getTableName: () => options.tableName || `${name}s`, 
+          beforeCreate: jest.fn(), 
+          hasMany: jest.fn(),
+          belongsTo: jest.fn(),
+        };
+      }),
+    }
+  };
 });
 
-import { Note }   from '../models/note.js';
-import { User }   from '../models/User.js';
-import { Album }  from '../models/Album.js';
-import { Track }  from '../models/Track.js';
-import { Listen } from '../models/Listen.js';
+const { Note } = await import('../models/note.js');
+const { User }  =await  import('../models/User.js');
+const { Album } = await import ('../models/Album.js');
+const { Track }  = await import('../models/Track.js');
+const { Listen } = await import('../models/Listen.js');
 
 // ─── Note ────────────────────────────────────────────────────────────────────
 describe('Note model definition', () => {

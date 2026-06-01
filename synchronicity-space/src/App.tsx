@@ -18,6 +18,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { jwtDecode } from "jwt-decode";
 export const API_BASE_URL = `https://${window.location.hostname}:3000`;
 import { getCookie } from "./utils/cookies";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 
 export const playSpotifyAlbum = async (token: string, deviceId: string, albumUri: string) => {
   console.log("Using Token:", token);
@@ -182,6 +183,7 @@ export default function App() {
 
           <Route path="login" element={<LoginPage setCurrentUser={setCurrentUser}/>} />
           <Route path="register" element={<RegisterPage />} />
+          <Route path="verify-email" element={<VerifyEmailPage />} />
           
           <Route path="forgot-password" element={<ForgotPasswordPage />} />
           <Route path="reset-password" element={<ResetPasswordPage />} />

@@ -1,5 +1,10 @@
+import { jest } from '@jest/globals';
 
-import { NoteCreateSchema, NoteUpdateSchema } from '../models/note.js';
+jest.unstable_mockModule('../database.js', () => ({
+  sequelize: { define: jest.fn() }
+}));
+
+const { NoteCreateSchema, NoteUpdateSchema }  = await import('../models/note.js');
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const validUUID  = '550e8400-e29b-41d4-a716-446655440000';

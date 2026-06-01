@@ -12,9 +12,14 @@ async function seed() {
     const [p1] = await Permission.findOrCreate({ where: { name: 'view_stats' } });
     const [p2] = await Permission.findOrCreate({ where: { name: 'manage_users' } });
     const [p3] = await Permission.findOrCreate({ where: { name: 'edit_library' } });
+    const [p8] = await Permission.findOrCreate({ where: {name: 'navigate_listening_space'}});
+    const [p4] = await Permission.findOrCreate({where: {name: 'chat_with_users'}});
+    const [p5] = await Permission.findOrCreate({where: {name: 'view_library'}});
+    const [p6] = await Permission.findOrCreate({where: {name: 'play_music'}});
+    const [p7] = await Permission.findOrCreate({where: {name: 'leave_notes'}});
 
-    await adminRole.addPermissions([p1, p2, p3]);
-    await userRole.addPermissions([p1]);
+    await adminRole.addPermissions([p1, p2, p3, p4, p8,p5,p6,p7]);
+    await userRole.addPermissions([p1,p5,p6,p7]);
 
     console.log("Seeding successful!");
     process.exit(0);
