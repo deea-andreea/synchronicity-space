@@ -27,7 +27,7 @@ const server = https.createServer(sslOptions, app);
 
 const io = new Server(server, {
   cors: {
-    origin: [`https://172.20.10.3:5173`],
+    origin: [`https://172.20.10.3:5173`, /vercel\.app$/],
     methods: ["GET", "POST"]
   }
 })
@@ -53,7 +53,7 @@ setBroadcast((payload) => {
 const userSocketMap = {};
 async function startServer() {
   try {
-    await sequelize.sync({ alter: true });
+    // await sequelize.sync({ alter: true });
     console.log("Tables have been synchronized.");
     await sequelize.authenticate();
     console.log('Database connected successfully.');

@@ -1,6 +1,6 @@
 'use strict';
 
-import { sequelize } from '../database.js'; // Use your existing connection
+import { sequelize } from '../database.js'; 
 import { User } from './User.js';
 import { Note } from './Note.js';
 import { Album } from './Album.js';
