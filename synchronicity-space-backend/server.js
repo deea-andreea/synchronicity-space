@@ -1,4 +1,5 @@
 import app from "./src/app.js";
+import http from "http"; // 🚀 Added this missing import
 import https from "https";
 import fs from "fs";
 import { sequelize } from './src/database.js';
@@ -17,12 +18,19 @@ const PORT = process.env.PORT || 3000;
 
 // app.all('/graphql', createHandler({schema, rootValue}))
 
-const sslOptions = {
-    key: fs.readFileSync('./key.pem'),
-    cert: fs.readFileSync('./cert.pem')
-};
+let server; // 🚀 Declared the server variable so it doesn't throw a ReferenceError
 
-const server = https.createServer(sslOptions, app);
+if (process.env.NODE_ENV === 'production') {
+  // Render handles the HTTPS/SSL decryption certificate automatically in the cloud.
+  server = http.createServer(app);
+} else {
+  // Local development uses your self-signed .pem files
+  const options = {
+    key: fs.readFileSync('./key.pem'),
+    cert: fs.readFileSync('./cert.pem'),
+  };
+  server = https.createServer(options, app);
+}
 // const wss = new WebSocketServer({ server });
 
 const io = new Server(server, {
@@ -32,23 +40,9 @@ const io = new Server(server, {
   }
 })
 
-// wss.on("connection", (ws) => {
-//   console.log("client connected");
-//   ws.on("close", () => console.log("client disconnected"));
-// });
-
 setBroadcast((payload) => {
-  // const message = JSON.stringify(payload);
-  // wss.clients.forEach((client) => {
-  //   if (client.readyState === 1) client.send(message);
-  // });
   io.emit("broadcast_event", payload);
 })
-
-// server.listen(PORT, () => console.log(`Running on http://localhost:${PORT}`));
-// server.listen(3000, () => {
-//   console.log(' GraphQL API at http://localhost:3000/graphql');
-// })
 
 const userSocketMap = {};
 async function startServer() {
@@ -112,8 +106,13 @@ async function startServer() {
       });
     });
 
-    server.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running on https://172.20.10.3:${PORT}`);
+    // 🚀 Let Render dynamically host the port on production
+    server.listen(PORT, () => {
+      if (process.env.NODE_ENV === 'production') {
+        console.log(`Production server running and accessible via HTTPS on Render port ${PORT}`);
+      } else {
+        console.log(`Local development server running on https://172.20.10.3:${PORT}`);
+      }
     });
 
   } catch (error) {
