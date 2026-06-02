@@ -35,10 +35,16 @@ if (process.env.NODE_ENV === 'production') {
 
 const io = new Server(server, {
   cors: {
-    origin: [`https://172.20.10.3:5173`, /vercel\.app$/],
-    methods: ["GET", "POST"]
+    origin: [
+      "https://172.20.10.3:5173",
+      "https://localhost:5173",
+      "https://synchronicity-space.vercel.app",
+      "https://synchronicity-space-deea-andreeas-projects.vercel.app"
+    ],
+    methods: ["GET", "POST"],
+    credentials: true
   }
-})
+});
 
 setBroadcast((payload) => {
   io.emit("broadcast_event", payload);
