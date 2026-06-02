@@ -53,7 +53,7 @@ setBroadcast((payload) => {
 const userSocketMap = {};
 async function startServer() {
   try {
-    // await sequelize.sync({ alter: true });
+    await sequelize.sync({ alter: true });
     console.log("Tables have been synchronized.");
     await sequelize.authenticate();
     console.log('Database connected successfully.');
