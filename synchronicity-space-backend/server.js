@@ -11,6 +11,9 @@ import { rootValue } from './src/graphql/resolvers.ts';
 import { connectNoSql } from "./src/nosql.js";
 import { Server } from 'socket.io';
 import dns from 'node:dns';
+import './src/models/User.js';   // Replace with your exact path to UserModel
+import './src/models/Album.js';  // Replace with your exact path to AlbumModel
+import './src/models/Track.js';
 
 dns.setServers(['8.8.8.8', '1.1.1.1']);
 
