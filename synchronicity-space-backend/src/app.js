@@ -13,7 +13,9 @@ const app = express();
 app.use((req, res, next) => {
   const allowedOrigins = [
     "https://172.20.10.3:5173",
-    "https://localhost:5173"
+    "https://localhost:5173",
+    "https://synchronicity-space.vercel.app",                         
+    "https://synchronicity-space-deea-andreeas-projects.vercel.app"
   ];
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
