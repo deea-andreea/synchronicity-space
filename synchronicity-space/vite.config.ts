@@ -31,7 +31,3 @@ export default defineConfig({
     ],
   },
 });
-
-export const API_BASE_URL = isProduction
-  ? (process.env.VITE_API_BASE_URL || 'https://synchronicity-space.onrender.com')
-  : `https://172.20.10.3:3000`; 
