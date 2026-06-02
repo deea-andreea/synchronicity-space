@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import './SessionManager.css';
+import { API_BASE_URL } from '../config';
 
-const socket = io(`https://${window.location.hostname}:3000`);
+export const socket = io(API_BASE_URL, {
+  withCredentials: true,
+  transports: ['websocket', 'polling']
+});
 
 export default function SessionManager({ currentUser, friendsList }) {
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);

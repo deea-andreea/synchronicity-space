@@ -16,9 +16,9 @@ import ListeningSpacePage from "./pages/ListeningSpacePage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage"; 
 import ResetPasswordPage from "./pages/ResetPasswordPage"; 
 import { jwtDecode } from "jwt-decode";
-export const API_BASE_URL = `https://${window.location.hostname}:3000`;
 import { getCookie } from "./utils/cookies";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
+import { API_BASE_URL } from "./config";
 
 export const playSpotifyAlbum = async (token: string, deviceId: string, albumUri: string) => {
   console.log("Using Token:", token);

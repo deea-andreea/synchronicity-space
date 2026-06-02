@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "../App";
+import { API_BASE_URL } from "../config";
 
 export async function register(userData: object) {
     console.log(userData);

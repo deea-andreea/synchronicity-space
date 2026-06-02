@@ -1,7 +1,7 @@
 import type { Note } from "../models/Note";
 import { isOnline, enqueue, getQueue, type PendingOperation, clearQueue, dequeueFirst } from "./offlineQueue";
 // import { randomUUID } from "crypto";
-import { API_BASE_URL } from "../App";
+import { API_BASE_URL } from "../config";
 
 export interface PaginatedNotes {
   items: Note[];

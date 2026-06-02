@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "../App";
+import { API_BASE_URL } from "../config";
 
 export async function recordListen(userId: string, albumId: string, genre: string): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/stats/listen`, {

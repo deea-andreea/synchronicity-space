@@ -3,8 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import './ListeningSpacePage.css';
 import { getFriends } from '../api/authApi';
 import { io } from 'socket.io-client';
+import { API_BASE_URL } from '../config';
 
-const socket = io(`https://${window.location.hostname}:3000`);
+export const socket = io(API_BASE_URL, {
+  withCredentials: true,
+  transports: ['websocket', 'polling']
+});
 
 export default function ListeningSpacePage({ currentUser }: { currentUser: any }) {
   const [friends, setFriends] = useState<any[]>([]);
