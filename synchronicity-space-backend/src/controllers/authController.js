@@ -58,14 +58,14 @@ export const login = async (req, res) => {
 };
 
 export const register = async (req, res) => {
-    const { username, email, password } = req.body; 
+    const { username, email, password } = req.body;
     try {
         if (!username || !email || !password) {
             return res.status(400).json({ error: 'Missing registration fields.' });
         }
 
         const userRole = await Role.findOne({ where: { name: 'user' } });
-        
+
         const existingEmail = await User.findOne({ where: { email } });
         if (existingEmail) return res.status(400).json({ error: 'Email is already registered.' });
 
@@ -77,33 +77,37 @@ export const register = async (req, res) => {
         const newUser = await User.create({
             username,
             email,
-            password, 
+            password,
             roleId: userRole.id,
-            isVerified: false, 
+            isVerified: false,
             verificationToken
         });
 
         const verifyLink = `https://172.20.10.3:5173/verify-email?token=${verificationToken}`;
-        
+
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
             tls: { rejectUnauthorized: false }
         });
 
-        await transporter.sendMail({
+        transporter.sendMail({
             from: `"Synchronicity Space" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: 'Verify Your Identity',
             html: `
-                <p>Hello ${username},</p>
-                <p>Thank you for registering. Please click the link below to verify your email identity and activate your account:</p>
-                <p><a href="${verifyLink}">${verifyLink}</a></p>
-            `
+        <p>Hello ${username},</p>
+        <p>Thank you for registering. Please click the link below to verify your email identity and activate your account:</p>
+        <p><a href="${verifyLink}">${verifyLink}</a></p>
+    `
+        }).then(() => {
+            console.log(`📧 Verification email successfully sent to ${email}`);
+        }).catch((mailError) => {
+            console.error("🔴 Background Email Delivery Failed:", mailError);
         });
 
-        return res.status(201).json({ 
-            message: 'Registration successful. Please check your email to verify your identity.' 
+        return res.status(201).json({
+            message: 'Registration successful. Please check your email to verify your identity.'
         });
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -156,7 +160,12 @@ export const forgotPassword = async (req, res) => {
         user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
         await user.save();
 
-        const resetLink = `https://172.20.10.3:5173/reset-password?token=${resetToken}`;
+        // 🚀 Dynamic Frontend URL Handling (Fallback to Localhost IP if needed)
+        const frontendUrl = process.env.NODE_ENV === 'production'
+            ? 'https://synchronicity-space.vercel.app' // Replace with your primary Vercel domain if different
+            : 'https://172.20.10.3:5173';
+
+        const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
 
         const transporter = nodemailer.createTransport({
             service: 'gmail',
@@ -166,28 +175,36 @@ export const forgotPassword = async (req, res) => {
             },
             tls: {
                 rejectUnauthorized: false
-
             }
         });
+
         const mailOptions = {
             from: `"Synchronicity Space Support" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: 'Reset Your Synchronicity Space Password',
-            html:`
+            html: `
                 <p>Hello,</p>
                 <p>You requested a password reset for your Synchronicity Space account.</p>
                 <p>Please click the link below to reset your password. This link will expire in 10 minutes:</p>
                 <p><a href="${resetLink}">${resetLink}</a></p>
             `
         };
-        await transporter.sendMail(mailOptions);
 
-        console.log(`\n📧 email sent to: ${email}]\n`);
+        // 🚀 Fire and forget in the background! Removed 'await' so it doesn't freeze your route.
+        transporter.sendMail(mailOptions)
+            .then(() => {
+                console.log(`📧 Recovery email successfully sent to: ${email}`);
+            })
+            .catch((mailError) => {
+                console.error("🔴 Background Recovery Email Delivery Failed:", mailError);
+            });
 
-        res.json({ message: "A security recovery link has been sent to your email address." });
+        // 🌟 Instantly respond to the frontend UI
+        return res.json({ message: "A security recovery link has been sent to your email address." });
+
     } catch (err) {
-        console.error("Email delivery failed:", err);
-        res.status(500).json({ error: "Failed to securely deliver recovery email message." });
+        console.error("Forgot Password Controller Crash:", err);
+        return res.status(500).json({ error: "Failed to process security recovery operation." });
     }
 };
 
@@ -231,7 +248,7 @@ export const verifyEmail = async (req, res) => {
         }
 
         user.isVerified = true;
-        user.verificationToken = null; 
+        user.verificationToken = null;
         await user.save();
 
         return res.json({ message: "Identity verified successfully! You can now log in." });
