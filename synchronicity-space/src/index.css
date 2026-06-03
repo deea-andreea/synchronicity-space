@@ -32,7 +32,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-  background-image: url("background.png");
+  background-image: url("/background.svg");
   background-size: cover;
 }
 }
@@ -57,7 +57,7 @@ button, input, select, textarea {
 
 :root {
   /* background-color: #0a0a0a; */
-  background-image: url("background.png");
+  background-image: url("/background.svg");
   background-attachment: fixed;
   background-size: cover;
 }
