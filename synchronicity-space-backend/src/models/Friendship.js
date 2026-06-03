@@ -5,4 +5,7 @@ export const Friendship = sequelize.define('Friendship', {
     userId: DataTypes.UUID,
     friendId: DataTypes.UUID,
     status: DataTypes.STRING
-}, { timestamps: false })
+}, { timestamps: false }, {
+  tableName: 'friendships',
+  freezeTableName: true,
+})

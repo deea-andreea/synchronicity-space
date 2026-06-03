@@ -34,6 +34,9 @@ export const NoteCreateSchema = z.object({
     trackId: z.string(),
     albumId: z.string(),
     text: z.string().min(1).max(100)
+}, {
+  tableName: 'notes',
+  freezeTableName: true,
 });
 
 export const NoteUpdateSchema = z.object({

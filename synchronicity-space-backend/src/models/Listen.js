@@ -11,4 +11,9 @@ export const Listen = sequelize.define('Listen', {
     albumId: DataTypes.STRING,
     genre: DataTypes.STRING,
     listenDate: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
-}, { timestamps: false });
+}, 
+{ timestamps: false }, 
+{
+  tableName: 'listens',
+  freezeTableName: true,
+});

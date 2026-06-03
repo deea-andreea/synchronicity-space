@@ -14,4 +14,7 @@ export const Permission = sequelize.define('Permission', {
     } 
 }, { 
     timestamps: false 
+}, {
+  tableName: 'permissions',
+  freezeTableName: true,
 });

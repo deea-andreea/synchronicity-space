@@ -11,6 +11,9 @@ export const UserAlbum = sequelize.define('UserAlbum', {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW
     }
+}, {
+  tableName: 'useralbums',
+  freezeTableName: true,
 });
 
 User.belongsToMany(Album, { through: UserAlbum });
