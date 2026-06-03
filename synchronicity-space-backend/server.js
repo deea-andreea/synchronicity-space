@@ -56,7 +56,7 @@ setBroadcast((payload) => {
 const userSocketMap = {};
 async function startServer() {
   try {
-    await sequelize.sync({ alter: true });
+    // await sequelize.sync({ alter: true });
     console.log("Tables have been synchronized.");
     await sequelize.authenticate();
     console.log('Database connected successfully.');
@@ -115,7 +115,6 @@ async function startServer() {
       });
     });
 
-    // 🚀 Let Render dynamically host the port on production
     server.listen(PORT, () => {
       if (process.env.NODE_ENV === 'production') {
         console.log(`Production server running and accessible via HTTPS on Render port ${PORT}`);
