@@ -19,8 +19,8 @@ Track.belongsTo(Album, { foreignKey: 'albumId' });
 User.hasMany(Listen, { foreignKey: 'userId' });
 Listen.belongsTo(User, { foreignKey: 'userId' });
 
-Role.belongsToMany(Permission, { through: 'RolePermissions' });
-Permission.belongsToMany(Role, { through: 'RolePermissions' });
+Role.belongsToMany(Permission, { through: 'rolepermissions' });
+Permission.belongsToMany(Role, { through: 'rolepermissions' });
 
 User.belongsTo(Role, { foreignKey: 'roleId' });
 Role.hasMany(User, { foreignKey: 'roleId' });
