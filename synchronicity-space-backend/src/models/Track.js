@@ -16,8 +16,7 @@ export const Track = sequelize.define('Track', {
     },
 
 }, {
-  timestamps: false
-}, {
+  timestamps: false,
   tableName: 'tracks',
   freezeTableName: true,
 })

@@ -11,8 +11,7 @@ export const Album = sequelize.define('Album', {
     genre: DataTypes.STRING,
     coverURL: DataTypes.STRING
 }, {
-  timestamps: false 
-}, {
+  timestamps: false ,
   tableName: 'albums',
   freezeTableName: true,
 })

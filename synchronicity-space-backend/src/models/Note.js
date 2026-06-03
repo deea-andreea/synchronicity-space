@@ -26,7 +26,9 @@ export const Note = sequelize.define('Note', {
         allowNull: false,
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    tableName: 'notes',
+  freezeTableName: true,
 });
 
 export const NoteCreateSchema = z.object({
@@ -34,9 +36,6 @@ export const NoteCreateSchema = z.object({
     trackId: z.string(),
     albumId: z.string(),
     text: z.string().min(1).max(100)
-}, {
-  tableName: 'notes',
-  freezeTableName: true,
 });
 
 export const NoteUpdateSchema = z.object({
