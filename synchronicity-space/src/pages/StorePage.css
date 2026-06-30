@@ -8,3 +8,120 @@
         width: 30vw;
     }
 }
+
+.store-search-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    margin: 20px auto 30px auto;
+}
+
+.store-search-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 12px 45px 12px 20px;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.store-search-input:focus {
+    border-color: rgb(124, 151, 134);
+    box-shadow: 0 0 10px rgba(124, 151, 134, 0.3), inset 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.clear-search-btn {
+    position: absolute;
+    right: 15px;
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 1.1rem;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.clear-search-btn:hover {
+    opacity: 1;
+}
+
+.owned-badge {
+    display: inline-block;
+    background-color: rgb(124, 151, 134);
+    color: #121212;
+    font-family: 'Press Start 2P', sans-serif;
+    font-size: 0.5rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-top: 5px;
+    box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.7);
+}
+
+.store-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 40px 0;
+    font-family: 'Press Start 2P', sans-serif;
+    font-size: 0.8rem;
+    color: rgb(124, 151, 134);
+}
+
+.store-loading .spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid rgba(255,255,255,0.1);
+    border-top: 3px solid rgb(124, 151, 134);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.store-end-msg {
+    margin: 40px 0;
+    font-family: 'Press Start 2P', sans-serif;
+    font-size: 0.8rem;
+    opacity: 0.5;
+}
+
+.empty-msg {
+    margin: 40px 0;
+    font-family: 'Press Start 2P', sans-serif;
+    font-size: 0.8rem;
+    opacity: 0.7;
+    color: #ff6b6b;
+}
+
+/* Button override for Added State */
+.added-to-library-btn {
+    text-align: end;
+    font-size: 1vw !important;
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    color: rgb(124, 151, 134) !important;
+    -webkit-text-stroke: 0.5px #0d3a12 !important;
+}
+
+.add-to-library-btn {
+    text-align: end;
+    font-size: 1.2vw;
+    letter-spacing: 20%;
+    align-items: center;
+    margin: 0;
+    cursor: pointer;
+}

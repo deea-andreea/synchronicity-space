@@ -7,7 +7,9 @@ export interface Album {
   genre: string;
   year: number;
   coverImage: string;
+  coverURL?: string;
   description: string;
   tracks: Track[];
+  Tracks?: Track[];
   status?: 'available' | 'delivering' | 'owned';
 }

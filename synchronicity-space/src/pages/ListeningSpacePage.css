@@ -1,190 +1,19 @@
-:root {
-  /* Brighter Retro Palette */
-  --retro-walnut: #611f1fac; 
-  --retro-olive: #611f1fac;
-  --retro-cream: #611f1fac;
-  --room-depth: 1200px; 
-}
-
-.room-stage {
-  width: 100vw;
-  height: 100vh;
-  background-color: #3d1b11; /* Dark gray instead of black so we can see edges */
+/* --- POSITION CONTROLLER GROUP --- */
+.controls-button-group {
+  position: absolute;
+  top: 13vh;
+  right: 5vw;
+  z-index: 2000;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  perspective: 1500px;
-  /* Shifting eye level up makes the floor look huge */
-  perspective-origin: 50% 30%; 
+  flex-direction: column;
+  gap: 10px;
 }
 
-.retro-overlay {
-  /* position: absolute;
-  inset: 0;
-  z-index: 10;
-  pointer-events: none;
-  
-  background: radial-gradient(circle at 50% 30%, transparent 10%, rgb(0, 0, 0) 100%);
-  opacity: 0.5; */
-  position: fixed; /* Covers the whole viewport */
-  inset: 0;
-  z-index: 9999; /* Make sure it stays on top */
-  pointer-events: none; /* Allows you to click things underneath */
-  
-  /* The Grain: SVG noise */
-  /* background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"); */
- background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  
-  /* FIX: This makes the noise "burn" into the background instead of sitting on top like a fog */
-  mix-blend-mode: multiply; 
-  opacity: 50%; 
-  /* background: radial-gradient(circle at 50% 30%, transparent 0%, rgb(0, 0, 0) 100%); */
-  
-  backdrop-filter: blur(3px);
-}
-
-.room-wrapper {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
-}
-
-.wall, .floor, .ceiling {
-  position: absolute;
-  /* REMOVE BORDER LATER - for debugging only */
-  /* border: 1px solid rgba(255,255,255,0.1);  */
-}
-
-/* --- THE BACK WALL --- */
-.back-wall {
-  width: 100vw;
-  height: 100vh;
-  background-color: var(--retro-cream);
-  /* Pushing it back slightly less to ensure it renders */
-  transform: translateZ(calc(var(--room-depth) * -1));
-  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.462);
-   /* background-image: 
-    url("https://transparenttextures.com/patterns/kinda-jean.png"); */
-}
-
-/* --- THE HUGE FLOOR --- */
-.floor {
-  width: 100vw;
-  height: var(--room-depth);
-  bottom: 0;
-  transform-origin: bottom;
-  transform: rotateX(90deg);
-  background: #401a10;
-  opacity: 15%;
-  background-image: 
-    linear-gradient(to top, rgb(0, 0, 0) 0%, transparent 90%),
-    url("https://transparenttextures.com/patterns/tileable-wood-colored.png");
-}
-
-.floor-texture {
-  width: 100%;
-  height: 100%;
-  background-image: 
-    /* linear-gradient(to top, rgba(0,0,0,0.1) 0%, transparent 60%), */
-    url('https://www.transparenttextures.com/patterns/wood-pattern.png');
-  background-size: 300px;
-}
-
-/* --- THE SMALL CEILING --- */
-.ceiling {
-  width: 100vw;
-  height: var(--room-depth);
-  top: 0;
-  transform-origin: top;
-  transform: rotateX(-90deg);
-  background: #e0b78c;
-}
-
-/* --- SIDE WALLS --- */
-.left-wall {
-  width: var(--room-depth);
-  height: 100vh;
-  left: 0;
-  transform-origin: left;
-  transform: rotateY(90deg);
-  opacity: 90%;
-  background-image: 
-    url("https://transparenttextures.com/patterns/kinda-jean.png");
-  background: linear-gradient(to right, rgba(0,0,0,0.1), transparent),
-              var(--retro-walnut);
-        
-}
-
-.right-wall {
-  width: var(--room-depth);
-  height: 100vh;
-  right: 0;
-  transform-origin: right;
-  transform: rotateY(-90deg);
-  background-image: 
-    url("https://transparenttextures.com/patterns/kinda-jean.png");
-  background: linear-gradient(to left, rgba(0,0,0,0.1), transparent),
-              var(--retro-olive);
-
-}
-
-.ambient-glow {
-  position: absolute;
-  top: 20%;
-  width: 100%;
-  height: 60%;
-  background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 80%);
-  filter: blur(40px);
-}
-
-.couch {
-  width: 35vw;
-  height: var(--room-depth);
-  position: relative;
-  bottom: 8vw;
-  right:3vw
-}
-.plant {
-  width: 10vw;
-  height: var(--room-depth);
-  position: relative;
-  bottom: 12vw;
-  right:43vw
-}
-.rug {
-  width: 30vw; 
-  position: absolute;
-  
-  bottom: 20%;
-  right: 40%;
-  
-  transform-origin: bottom;
-  transform: translateX(-50%) rotateX(90deg) rotateZ(90deg) translateZ(2px);
-
-  filter: drop-shadow(0 0 10px rgba(0,0,0,0.3));
-}
-
-.listening-container {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    font-family: 'Courier New', Courier, monospace; /* For that retro look */
-}
-
-.manage-sessions-btn {
-    position: absolute;
-    top: 13vh;
-    right: 5vw;
-    z-index: 2000;
-    color: rgb(0, 0, 0);
-    border: none;
-    padding: 10px 20px;
-    cursor: pointer;
-}
-
-.manage-sessions-btn, .start-session-btn, .stop-session-btn, .join-btn, .ignore-btn {
+.manage-sessions-btn, .manage-spin-btn {
+  color: rgb(0, 0, 0);
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
   background: none;
   color: rgb(167, 167, 167);
   border: 1px solid rgb(105, 105, 105);
@@ -192,205 +21,127 @@
   text-transform: uppercase;
   cursor: pointer;
   padding: 5px 10px;
+  text-align: right;
+  min-width: 140px;
 }
 
-.stop-session-btn {
-  align-self: flex-start;
-  font-size: 0.8rem;
-  margin-bottom: 10px;
+.manage-spin-btn {
+  background-color: rgba(0, 0, 0, 0.4);
 }
 
-/* Ensure the wrapper views take up full height of the black box */
-.setup-view, .chat-view {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
+.manage-spin-btn:hover, .manage-sessions-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
-.retro-chat-box {
-    position: absolute;
-    right: 5%;
-    top: 15%;
-    width: 380px; /* Slightly wider */
-    height: 65%; 
-    background: rgba(18, 11, 11, 0.85); /* Darker, desaturated black */
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    z-index: 1500;
-    display: flex;
-    flex-direction: column;
-    padding: 25px; /* More breathing room */
-    box-sizing: border-box;
-    box-shadow: 10px 10px 30px rgba(0,0,0,0.5);
+/* --- SPIN WORKFLOW BOX DECORATION --- */
+.spin-manager-box h3 {
+  margin-top: 0;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
 }
 
-.message-history {
-    flex: 1; /* This is the "greedy" element */
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 20px; /* Space between different people talking */
-    margin-bottom: 20px;
-    padding-right: 10px;
+.sub-header-desc {
+  font-size: 0.75rem;
+  color: #8a8174;
+  margin-top: -5px;
+  margin-bottom: 20px;
+  line-height: 1.4;
 }
 
-/* Scrollbar - Minimalist */
-.message-history::-webkit-scrollbar { width: 3px; }
-.message-history::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
-
-.message-entry {
-    display: flex;
-    flex-direction: column;
+.spin-stop-btn {
+  margin-top: 20px;
+  border-color: #8c3a3a !important;
+  color: #ff8585 !important;
 }
 
-/* Me (Right Aligned) */
-.message-entry.me {
-    align-self: flex-end;
-    text-align: right;
-    color: #f3e6d5; 
+.spin-stop-btn:hover {
+  background-color: #8c3a3a !important;
+  color: white !important;
 }
 
-/* Them (Left Aligned) */
-.message-entry.them {
-    align-self: flex-start;
-    text-align: left;
-    color: #f3e6d5;
+/* --- INVITE STYLE EXTENSION --- */
+.spin-notification {
+  border-bottom: 2px solid #697c4c !important;
 }
 
-.sender-name {
-    font-size: 0.75rem;
-    text-transform: lowercase;
-    margin-bottom: 5px;
-    opacity: 0.9;
-    letter-spacing: 1px;
+.spin-btn {
+  background: #697c4c !important;
+  color: white !important;
 }
 
-.message-text {
-    margin: 0;
-    font-size: 0.85rem;
-    line-height: 1.6;
-    max-width: 250px;
-}
-
-/* Input Area - Borderless style like your image */
-.message-input-area {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border-top: 1px solid rgba(255,255,255,0.1);
-    padding-top: 15px;
-}
-
-.message-input-area input {
-    flex: 1;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: #f3e6d5;
-    padding: 10px;
-    font-size: 0.8rem;
-    font-family: inherit;
-    outline: none;
-}
-
-.message-input-area button {
-    background: #444;
-    color: #fff;
-    border: none;
-    padding: 8px 15px;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.message-input-area button:hover {
-    background: #666;
-}
-
-/* Close 'X' in top right of the box */
-.close-chat-x {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    cursor: pointer;
-    opacity: 0.5;
-    font-size: 1.2rem;
-}
-.close-chat-x:hover { opacity: 1; }
-
-.invite-notification {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  background: black;
-  border-bottom: 2px solid white;
-  padding: 10px;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  z-index: 2000;
-  font-family: 'Courier New', Courier, monospace;
-}
-
-@keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-
-.invite-text {
-    color: #fff;
-    font-size: 0.8rem;
-    margin-bottom: 10px;
-    text-transform: lowercase;
-}
-
-
-@keyframes blinker {
-    50% { opacity: 0; }
-}
-
-.invite-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.join-btn {
-    background: #697c4c;
-    color: #000;
-    border: none;
-    padding: 5px 15px;
-    font-weight: bold;
-    cursor: pointer;
-    font-size: 0.7rem;
-}
-
-.ignore-btn {
-    background: transparent;
-    color: #666;
-    border: 1px solid #333;
-    padding: 5px 10px;
-    cursor: pointer;
-    font-size: 0.7rem;
-}
-
-.back-home-btn {
+/* --- 3D PRESENCE GRID ON BACK WALL --- */
+.presence-grid {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  z-index: 1000; /* Ensure it stays above the room elements */
-  background: #222;
-  color: #868686; /* Retro green */
-  border: 2px solid #8d8d8d;
-  padding: 8px 15px;
-  font-family: 'Courier New', Courier, monospace;
-  font-weight: bold;
-  cursor: pointer;
-  text-transform: uppercase;
-  transition: all 0.2s ease;
+  bottom: 25%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+  width: 80%;
+  max-width: 700px;
+  transform-style: preserve-3d;
 }
 
-.back-home-btn:hover {
-  background: #888888;
-  color: #000;
+/* Retro Pixel Indicator Boxes */
+.presence-card {
+  background: rgba(18, 11, 11, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 130px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* Indicator Status Dot */
+.presence-card .status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.presence-card .username {
+  font-size: 0.8rem;
+  color: #f3e6d5;
+  text-transform: lowercase;
+}
+
+.presence-card .badge {
+  font-size: 0.6rem;
+  margin-left: auto;
+  letter-spacing: 0.5px;
+}
+
+/* ACTIVE STATE */
+.presence-card.active {
+  border-color: #697c4c;
+}
+
+.presence-card.active .status-indicator {
+  background-color: #92b069;
+  box-shadow: 0 0 8px #92b069;
+}
+
+.presence-card.active .badge {
+  color: #92b069;
+}
+
+/* INACTIVE STATE */
+.presence-card.inactive {
+  opacity: 0.5;
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.presence-card.inactive .status-indicator {
+  background-color: #4f463e;
+}
+
+.presence-card.inactive .badge {
+  color: #7d7265;
 }

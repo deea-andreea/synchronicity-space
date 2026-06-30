@@ -19,6 +19,7 @@ import { jwtDecode } from "jwt-decode";
 import { getCookie } from "./utils/cookies";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
 import { API_BASE_URL } from "./config";
+import { addAlbumToLibrary, removeAlbumFromLibrary } from "./api/albumsApi";
 
 export const playSpotifyAlbum = async (token: string, deviceId: string, albumUri: string) => {
   console.log("Using Token:", token);
@@ -41,22 +42,31 @@ export default function App() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const albRes = await fetch(`${API_BASE_URL}/albums`);
-        const albumsFromDb = await albRes.json();
-        setLibraryAlbums(albumsFromDb);
-
         const savedToken = localStorage.getItem("authToken");
 
         if (savedToken) {
           try {
             const decodedUser: any = jwtDecode(savedToken);
             if (decodedUser.exp * 1000 > Date.now()) {
-              setCurrentUser({
-                id: decodedUser.id,
-                username: decodedUser.username,
-                role: decodedUser.roleName,
-                permissions: decodedUser.permissions
+              if (!currentUser || currentUser.id !== decodedUser.id) {
+                setCurrentUser({
+                  id: decodedUser.id,
+                  username: decodedUser.username,
+                  role: decodedUser.roleName,
+                  permissions: decodedUser.permissions
+                });
+              }
+
+              // Fetch user-specific library albums
+              const libRes = await fetch(`${API_BASE_URL}/albums/library`, {
+                headers: {
+                  Authorization: `Bearer ${savedToken}`
+                }
               });
+              if (libRes.ok) {
+                const albumsFromDb = await libRes.ok ? await libRes.json() : [];
+                setLibraryAlbums(albumsFromDb);
+              }
               setIsLoading(false);
               return;
             }
@@ -66,7 +76,10 @@ export default function App() {
           }
         }
 
-        setCurrentUser(null);
+        if (currentUser !== null) {
+          setCurrentUser(null);
+        }
+        setLibraryAlbums([]);
       } catch (err) {
         console.error("Database connection failed:", err);
       } finally {
@@ -75,7 +88,7 @@ export default function App() {
     };
 
     loadData();
-  }, []);
+  }, [currentUser?.id]);
 
   useEffect(() => {
     if (isLoading || !currentUser) return;
@@ -122,8 +135,33 @@ export default function App() {
     setActiveAlbum(album);
   };
 
-  const handleRemove = (id: string) => {
-    setLibraryAlbums(prev => prev.filter(a => a.id !== id));
+  const handleRemove = async (id: string) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        await removeAlbumFromLibrary(token, id);
+      }
+      setLibraryAlbums(prev => prev.filter(a => a.id !== id));
+    } catch (err) {
+      console.error("Failed to remove album from library:", err);
+      alert("Could not remove album from library. Please try again.");
+    }
+  };
+
+  const handleAddToLibrary = async (album: Album) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        await addAlbumToLibrary(token, album.id);
+        setLibraryAlbums(prev => {
+          if (prev.some(a => a.id === album.id)) return prev;
+          return [...prev, album];
+        });
+      }
+    } catch (err) {
+      console.error("Failed to add album to library:", err);
+      throw err;
+    }
   };
 
   const hasFrontendPermission = (permissionName: string) => {
@@ -149,6 +187,20 @@ export default function App() {
             element={
               hasFrontendPermission("view_library") ? (
                 <LibraryPage albums={libraryAlbums} onRemove={handleRemove} onPlayAlbum={handlePlayAlbum} />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            } 
+          />
+
+          <Route
+            path="store"
+            element={
+              hasFrontendPermission("view_library") ? (
+                <StorePage 
+                  onAddToLibrary={handleAddToLibrary}
+                  libraryAlbums={libraryAlbums}
+                />
               ) : (
                 <Navigate to="/login" replace />
               )
