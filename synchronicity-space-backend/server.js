@@ -153,6 +153,11 @@ async function startServer() {
         console.log(`Socket ${socket.id} joined room: ${sessionId}`);
       });
 
+      socket.on("sync_playback", ({ spinId, album, trackIndex }) => {
+        console.log(`Syncing playback in room ${spinId}: ${album.title} (Track index: ${trackIndex})`);
+        socket.to(spinId).emit("receive_playback_sync", { album, trackIndex });
+      });
+
       socket.on("disconnect", () => {
         // Remove from userSocketMap
         for (const userId in userSocketMap) {

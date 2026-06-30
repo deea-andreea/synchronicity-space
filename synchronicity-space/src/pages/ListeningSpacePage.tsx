@@ -10,12 +10,12 @@ export const socket = io(API_BASE_URL, {
   transports: ['websocket', 'polling']
 });
 
-export default function ListeningSpacePage({ currentUser }: { currentUser: any }) {
+export default function ListeningSpacePage({ currentUser, albums = [] }: { currentUser: any, albums?: any[] }) {
   const [friends, setFriends] = useState<any[]>([]);
   const [showManager, setShowManager] = useState(false);
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
 
-  // --- NEW WORKFLOW STATES FOR SHARED SPIN ---
+  // --- CO-SPIN WORKFLOW STATES ---
   const [showSpinManager, setShowSpinManager] = useState(false);
   const [selectedSpinFriends, setSelectedSpinFriends] = useState<string[]>([]);
   const [isSpinActive, setIsSpinActive] = useState<boolean>(() => {
@@ -30,6 +30,13 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
     const saved = localStorage.getItem('spin_invited_friends');
     return saved ? JSON.parse(saved) : [];
   });
+  const [spinHostName, setSpinHostName] = useState<string>(() => {
+    return localStorage.getItem('spin_host_name') || "host";
+  });
+
+  // --- VINYL PLAYER STATES ---
+  const [playingAlbum, setPlayingAlbum] = useState<any | null>(null);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
 
   const [input, setInput] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -85,7 +92,7 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
     };
   }, [isSessionActive, currentSessionId]);
 
-  // --- NEW: SHARED SPIN PRESENCE SOCKETS ---
+  // --- NEW: CO-SPIN PRESENCE & PLAYBACK SOCKETS ---
   useEffect(() => {
     if (isSpinActive && currentSpinId) {
       console.log("Joining spin presence room:", currentSpinId);
@@ -100,6 +107,13 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
         console.log("Presence update received:", activeUserIds);
         setActiveSpinUsers(activeUserIds);
       });
+
+      // Synchronize Turntable Playback across other devices in the session [1]
+      socket.on("receive_playback_sync", ({ album, trackIndex }) => {
+        console.log("Syncing playback from other user:", album?.title, trackIndex);
+        setPlayingAlbum(album);
+        setCurrentTrackIndex(trackIndex);
+      });
     }
 
     return () => {
@@ -107,6 +121,7 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
         socket.emit("leave_spin_presence", { spinId: currentSpinId, userId: currentUser.id });
       }
       socket.off("spin_presence_update");
+      socket.off("receive_playback_sync");
     };
   }, [isSpinActive, currentSpinId, currentUser?.id, currentUser?.username]);
 
@@ -182,7 +197,7 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
     setActiveInvite(null);
   };
 
-  // --- NEW: SHARED SPIN WORKFLOW HANDLERS ---
+  // --- CO-SPIN WORKFLOW HANDLERS ---
   const handleStartSpin = () => {
     const sessionId = `spin-${currentUser.id}`;
     localStorage.setItem('active_spin_id', sessionId);
@@ -190,6 +205,8 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
     const invitedList = friends.filter(f => selectedSpinFriends.includes(f.id));
     setInvitedFriendsData(invitedList);
     localStorage.setItem('spin_invited_friends', JSON.stringify(invitedList));
+    localStorage.setItem('spin_host_name', currentUser.username);
+    setSpinHostName(currentUser.username);
 
     socket.emit("send_spin_invite", {
       senderName: currentUser.username,
@@ -210,6 +227,8 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
 
     localStorage.setItem('active_spin_id', targetSessionId);
     localStorage.setItem('spin_invited_friends', JSON.stringify(invitedList));
+    localStorage.setItem('spin_host_name', spinInvite.senderName);
+    setSpinHostName(spinInvite.senderName);
 
     socket.emit("join_spin_presence", {
       spinId: targetSessionId,
@@ -241,10 +260,41 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
 
     localStorage.removeItem('active_spin_id');
     localStorage.removeItem('spin_invited_friends');
+    localStorage.removeItem('spin_host_name');
     setCurrentSpinId("");
     setIsSpinActive(false);
     setInvitedFriendsData([]);
     setActiveSpinUsers([]);
+    setPlayingAlbum(null);
+  };
+
+  // --- PLAYBACK SELECTION & SYNC ---
+  const handlePlayAlbum = (album: any, trackIndex: number = 0) => {
+    setPlayingAlbum(album);
+    setCurrentTrackIndex(trackIndex);
+
+    // If we're in a co-spin session, broadcast this event so your friends' rooms play it too! [1]
+    if (isSpinActive && currentSpinId) {
+      socket.emit("sync_playback", {
+        spinId: currentSpinId,
+        album: album,
+        trackIndex: trackIndex
+      });
+    }
+  };
+
+  const handleNextTrack = () => {
+    if (playingAlbum && currentTrackIndex < playingAlbum.Tracks.length - 1) {
+      const nextIndex = currentTrackIndex + 1;
+      handlePlayAlbum(playingAlbum, nextIndex);
+    }
+  };
+
+  const handlePrevTrack = () => {
+    if (currentTrackIndex > 0) {
+      const prevIndex = currentTrackIndex - 1;
+      handlePlayAlbum(playingAlbum, prevIndex);
+    }
   };
 
   useEffect(() => {
@@ -266,6 +316,36 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
     };
   }, [currentUser?.id]);
 
+  // --- DYNAMICALLY RESOLVE OTHER ROOM MEMBERS (PREVENTS DUPLICATION) --- [1]
+  const resolvedParticipants = (() => {
+    if (!isSpinActive) return [];
+    
+    const hostId = currentSpinId.startsWith("spin-") ? currentSpinId.split('-')[1] : null;
+    const list: any[] = [];
+
+    // 1. If we are the guest, include the host as an indicator card
+    if (hostId && hostId !== currentUser.id) {
+      list.push({
+        id: hostId,
+        username: spinHostName
+      });
+    }
+
+    // 2. Map over invited list, filtering out ourselves to prevent double cards
+    invitedFriendsData.forEach(friend => {
+      if (friend.id !== currentUser.id) {
+        if (!list.some(p => p.id === friend.id)) {
+          list.push(friend);
+        }
+      }
+    });
+
+    return list;
+  })();
+
+  // Use the first 3 catalog albums as the selectable quick-pick records for the shelf
+  const quickPicks = albums.slice(0, 3);
+
   return (
     <div className="listening-container">
       {activeInvite && (
@@ -280,7 +360,6 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
         </div>
       )}
 
-      {/* Shared Spin Session Invite Notification */}
       {spinInvite && (
         <div className="invite-notification spin-notification">
           <div className="invite-text">
@@ -293,17 +372,14 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
         </div>
       )}
 
-      {/* ORIGINAL CHAT BUTTON (LEFT COMPLETELY UNTOUCHED) */}
       <button className="manage-sessions-btn" onClick={() => setShowManager(!showManager)}>
         {showManager ? "✖" : "chat"}
       </button>
 
-      {/* NEW: SPIN SESSION CONTROLLER TOGGLE (SEPARATELY POSITIONED BELOW CHAT) */}
       <button className="manage-spin-btn" onClick={() => setShowSpinManager(!showSpinManager)}>
         {showSpinManager ? "✖" : (isSpinActive ? "spin status" : "shared spin")}
       </button>
 
-      {/* ORIGINAL CHAT BOX (LEFT COMPLETELY UNTOUCHED) */}
       {showManager && (
         <div className="retro-chat-box">
           {!isSessionActive ? (
@@ -365,7 +441,6 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
         </div>
       )}
 
-      {/* NEW: SPIN MANAGER OVERLAY (SEPARATE ABSOLUTELY POSITIONED BOX ON THE LEFT SIDE) */}
       {showSpinManager && (
         <div className="retro-spin-box">
           {!isSpinActive ? (
@@ -418,18 +493,16 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
           <div className="wall back-wall">
             <div className="ambient-glow"></div>
 
-            {/* FLOATING PRESENCE CARDS ON BACK WALL */}
+            {/* FLOATING RETRO INDICATOR CARDS */}
             {isSpinActive && (
               <div className="presence-grid">
-                {/* Include Host (Self) card */}
                 <div className="presence-card active">
                   <div className="status-indicator"></div>
                   <span className="username">{currentUser.username} (You)</span>
                   <span className="badge">ACTIVE</span>
                 </div>
 
-                {/* Friends card indicators */}
-                {invitedFriendsData.map(friend => {
+                {resolvedParticipants.map(friend => {
                   const isOnline = activeSpinUsers.includes(friend.id);
                   return (
                     <div key={friend.id} className={`presence-card ${isOnline ? 'active' : 'inactive'}`}>
@@ -441,6 +514,59 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
                 })}
               </div>
             )}
+
+            {/* WALL-MOUNTED PLAYABLE TURNTABLE & AUDIO MANAGEMENT */}
+            <div className="wall-player-container">
+              <div className="wall-vinyl-section">
+                <img className="wall-turntable-image" src="/turntable.svg" alt="turntable" />
+
+                <div className={`wall-disk-container ${playingAlbum ? "is-spinning" : ""}`}>
+                  <img src="/logo-vinyl.svg" alt="Vinyl" className="wall-disk-image" />
+                  {playingAlbum && (
+                    <div>
+                      <img src="/vinyl.svg" alt="Vinyl" className="wall-disk-image" />
+                      <img src={playingAlbum.coverURL} className="wall-vinyl-label" alt="label" />
+                    </div>
+                  )}
+                </div>
+
+                <img
+                  src="/needle.png"
+                  className={`wall-needle-image ${playingAlbum ? "needle-on" : ""}`}
+                  alt="needle"
+                />
+              </div>
+
+              {/* RECORD SHELF (IF IDLE) OR PLAYBACK CONTROL BAR (IF ACTIVE) */}
+              {!playingAlbum ? (
+                <div className="wall-record-shelf">
+                  <span className="shelf-hint">select a record:</span>
+                  <div className="shelf-album-covers">
+                    {quickPicks.map(album => (
+                      <img 
+                        key={album.id} 
+                        src={album.coverURL} 
+                        alt={album.title} 
+                        className="shelf-cover"
+                        onClick={() => handlePlayAlbum(album, 0)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="wall-playback-controls">
+                  <span className="wall-track-title">
+                    {playingAlbum.Tracks[currentTrackIndex]?.title || "Loading track..."}
+                  </span>
+                  <div className="wall-btns">
+                    <button onClick={handlePrevTrack}>◀</button>
+                    <button className="wall-stop-btn" onClick={() => setPlayingAlbum(null)}>◼</button>
+                    <button onClick={handleNextTrack}>▶</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
           </div>
           <div className="wall left-wall"></div>
           <div className="wall right-wall"></div>
