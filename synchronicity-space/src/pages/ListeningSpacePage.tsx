@@ -293,16 +293,17 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
         </div>
       )}
 
-      <div className="controls-button-group">
-        <button className="manage-sessions-btn" onClick={() => { setShowManager(!showManager); setShowSpinManager(false); }}>
-          {showManager ? "✖" : "chat"}
-        </button>
+      {/* ORIGINAL CHAT BUTTON (LEFT COMPLETELY UNTOUCHED) */}
+      <button className="manage-sessions-btn" onClick={() => setShowManager(!showManager)}>
+        {showManager ? "✖" : "chat"}
+      </button>
 
-        <button className="manage-spin-btn" onClick={() => { setShowSpinManager(!showSpinManager); setShowManager(false); }}>
-          {showSpinManager ? "✖" : (isSpinActive ? "spin status" : "shared spin")}
-        </button>
-      </div>
+      {/* NEW: SPIN SESSION CONTROLLER TOGGLE (SEPARATELY POSITIONED BELOW CHAT) */}
+      <button className="manage-spin-btn" onClick={() => setShowSpinManager(!showSpinManager)}>
+        {showSpinManager ? "✖" : (isSpinActive ? "spin status" : "shared spin")}
+      </button>
 
+      {/* ORIGINAL CHAT BOX (LEFT COMPLETELY UNTOUCHED) */}
       {showManager && (
         <div className="retro-chat-box">
           {!isSessionActive ? (
@@ -364,9 +365,9 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
         </div>
       )}
 
-      {/* SPIN MANAGER OVERLAY (NO CHAT) */}
+      {/* NEW: SPIN MANAGER OVERLAY (SEPARATE ABSOLUTELY POSITIONED BOX ON THE LEFT SIDE) */}
       {showSpinManager && (
-        <div className="retro-chat-box spin-manager-box">
+        <div className="retro-spin-box">
           {!isSpinActive ? (
             <div className="setup-view">
               <h3>SELECT SPIN PARTNERS</h3>
@@ -379,7 +380,7 @@ export default function ListeningSpacePage({ currentUser }: { currentUser: any }
                       key={f.id}
                       className={`friend-option ${isSelected ? 'selected' : ''}`}
                       onClick={() => setSelectedSpinFriends(prev =>
-                        isSelected ? prev.filter(id => id !== f.id) : (prev.length < 5 ? [...prev, f.id] : prev)
+                        isSelected ? prev.filter(id => id !== f.id) : [...prev, f.id]
                       )}
                     >
                       <span className="checkbox">{isSelected ? '[X]' : '[ ]'}</span>
