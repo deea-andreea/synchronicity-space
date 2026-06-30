@@ -229,3 +229,155 @@
   cursor: pointer;
   font-weight: bold;
 }
+
+/* --- VIEWPORT POSITIONED PRESENCE GRID (LEFT SIDE) --- */
+.presence-grid {
+  position: absolute;
+  top: 25%;
+  left: 20%; /* Safely aligned on the viewport so clicks respond flawlessly */
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* --- VIEWPORT POSITIONED VINYL PLAYER (RIGHT SIDE) --- */
+.wall-player-container {
+  position: absolute;
+  top: 22%;
+  right: 20%; /* Safely aligned on the viewport so clicks respond flawlessly */
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Isolated spinning disc container */
+.wall-vinyl-section {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wall-disk-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.wall-disk-image {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.wall-disk-container.is-spinning .wall-disk-image {
+  animation: spin 8s linear infinite;
+}
+
+.wall-vinyl-label {
+  position: absolute;
+  top: 35%;
+  left: 35%;
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  object-fit: cover;
+  z-index: 5;
+}
+
+.wall-disk-container.is-spinning .wall-vinyl-label {
+  animation: spin 8s linear infinite;
+}
+
+/* --- RECORD SHELF (WHEN IDLE) --- */
+.wall-record-shelf {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(18, 11, 11, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  gap: 5px;
+}
+
+.shelf-hint {
+  font-size: 0.65rem;
+  color: #c4ac86;
+  text-transform: uppercase;
+}
+
+.shelf-album-covers {
+  display: flex;
+  gap: 10px;
+}
+
+.shelf-cover {
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+  transition: transform 0.2s ease;
+  object-fit: cover;
+}
+
+.shelf-cover:hover {
+  transform: translateY(-4px) scale(1.05);
+}
+
+/* --- PLAYBACK CONTROL BAR --- */
+.wall-playback-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(18, 11, 11, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 8px 16px;
+  width: 200px;
+}
+
+.wall-track-title {
+  font-size: 0.75rem;
+  color: #f3e6d5;
+  text-align: center;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  margin-bottom: 5px;
+}
+
+.wall-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.wall-btns button {
+  background: #333;
+  color: white;
+  border: 1px solid #555;
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 3px 8px;
+}
+
+.wall-btns button:hover {
+  background: #555;
+}
+
+.wall-stop-btn {
+  border-color: #8c3a3a !important;
+  color: #ff8585 !important;
+}
+
+.wall-stop-btn:hover {
+  background: #8c3a3a !important;
+  color: white !important;
+}

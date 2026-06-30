@@ -69,6 +69,7 @@ async function startServer() {
         userSocketMap[userId] = socket.id;
         console.log(`User ${userId} is now linked to socket ${socket.id}`);
       });
+      
 
       socket.on("send_invite", ({ senderName, friendIds, sessionId }) => {
         console.log(`Invite from ${senderName} to friends:`, friendIds);
@@ -98,7 +99,7 @@ async function startServer() {
             io.to(targetSocketId).emit("receive_spin_invite", {
               sessionId: sessionId,
               senderName: senderName,
-              invitedFriends: invitedFriends // Forward invited lists so guests render indicators too
+              invitedFriends: invitedFriends
             });
           } else {
             console.log(`Friend ${friendId} is not online (no socket found for spin)`);
@@ -106,60 +107,41 @@ async function startServer() {
         });
       });
 
-      // 🚀 Added: Joining Shared Spin Room (Presence Registration)
+      // Joining Shared Spin Room (Presence Registration)
       socket.on("join_spin_presence", ({ spinId, userId, username }) => {
         socket.join(spinId);
         console.log(`Socket ${socket.id} (User: ${username}/${userId}) joined spin presence room: ${spinId}`);
         
-        // Save identifiers on socket so we can auto-cleanup on disconnection
         socket.spinId = spinId;
         socket.userId = userId;
 
         if (!activeSpins[spinId]) {
-          activeSpins[spinId] = new Set();
+          activeSpins[spinId] = {};
         }
-        activeSpins[spinId].add(userId);
+        activeSpins[spinId][userId] = username;
 
-        // Broadcast updated presence list
-        io.to(spinId).emit("spin_presence_update", Array.from(activeSpins[spinId]));
+        // Broadcast list of currently active userIds in the session [1]
+        io.to(spinId).emit("spin_presence_update", Object.keys(activeSpins[spinId]));
       });
 
-      // 🚀 Added: Manual Exit from Shared Spin Room
+      // Manual Exit from Shared Spin Room
       socket.on("leave_spin_presence", ({ spinId, userId }) => {
         socket.leave(spinId);
         console.log(`User ${userId} left spin room ${spinId}`);
 
         if (activeSpins[spinId]) {
-          activeSpins[spinId].delete(userId);
-          io.to(spinId).emit("spin_presence_update", Array.from(activeSpins[spinId]));
+          delete activeSpins[spinId][userId];
+          io.to(spinId).emit("spin_presence_update", Array.from(Object.keys(activeSpins[spinId])));
         }
       });
 
-      socket.on("send_message", (data) => {
-        const { sessionId, text, senderId, senderName } = data;
-
-        console.log(`Message in ${sessionId} from ${senderName}: ${text}`);
-
-        io.to(sessionId).emit("receive_message", {
-          senderId,
-          senderName,
-          text,
-          timestamp: new Date()
-        });
-      });
-
-      socket.on("join_session", (sessionId) => {
-        socket.join(sessionId);
-        console.log(`Socket ${socket.id} joined room: ${sessionId}`);
-      });
-
+      // Synchronize Turntable Music selections across room members [1]
       socket.on("sync_playback", ({ spinId, album, trackIndex }) => {
         console.log(`Syncing playback in room ${spinId}: ${album.title} (Track index: ${trackIndex})`);
         socket.to(spinId).emit("receive_playback_sync", { album, trackIndex });
       });
 
       socket.on("disconnect", () => {
-        // Remove from userSocketMap
         for (const userId in userSocketMap) {
           if (userSocketMap[userId] === socket.id) {
             console.log(`User ${userId} disconnected. Removing socket ${socket.id}`);
@@ -168,16 +150,23 @@ async function startServer() {
           }
         }
 
-        // 🚀 Added: Auto-cleanup of active spin presence on disconnection
+        // Auto-cleanup of active spin presence on disconnection
         if (socket.spinId && socket.userId) {
           const { spinId, userId } = socket;
           if (activeSpins[spinId]) {
-            activeSpins[spinId].delete(userId);
-            io.to(spinId).emit("spin_presence_update", Array.from(activeSpins[spinId]));
+            delete activeSpins[spinId][userId];
+            io.to(spinId).emit("spin_presence_update", Array.from(Object.keys(activeSpins[spinId])));
             console.log(`User ${userId} disconnected. Removed from spin presence room ${spinId}`);
           }
         }
       });
+      
+      socket.on("sync_playback", ({ spinId, album, trackIndex }) => {
+        console.log(`Syncing playback in room ${spinId}: ${album.title} (Track index: ${trackIndex})`);
+        socket.to(spinId).emit("receive_playback_sync", { album, trackIndex });
+      });
+
+      
     });
 
     server.listen(PORT, () => {
