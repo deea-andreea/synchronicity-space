@@ -23,7 +23,7 @@ export const UserAlbum = sequelize.define('UserAlbum', {
         defaultValue: DataTypes.NOW
     }
 }, {
-  tableName: 'UserAlbums',
+  tableName: 'useralbums',
   timestamps: true,
   freezeTableName: true,
 });

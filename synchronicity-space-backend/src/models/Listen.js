@@ -13,6 +13,6 @@ export const Listen = sequelize.define('Listen', {
     listenDate: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, 
 { timestamps: false,
-      tableName: 'Listens',
+      tableName: 'listens',
   freezeTableName: true,
 });

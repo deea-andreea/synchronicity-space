@@ -27,7 +27,7 @@ export const Note = sequelize.define('Note', {
     }
 }, {
     timestamps: true,
-    tableName: 'Notes',
+    tableName: 'notes',
   freezeTableName: true,
 });
 
