@@ -54,6 +54,8 @@ setBroadcast((payload) => {
 })
 
 const userSocketMap = {};
+const activeSpins = {}; // 🚀 Tracks active users in each spin room: { [spinId]: Set<userId> }
+
 async function startServer() {
   try {
     // await sequelize.sync({ alter: true });
@@ -86,6 +88,53 @@ async function startServer() {
         });
       });
 
+      // 🚀 Added: Handling Shared Spin Invites
+      socket.on("send_spin_invite", ({ senderName, friendIds, sessionId, invitedFriends }) => {
+        console.log(`Spin Invite from ${senderName} to friends:`, friendIds);
+        friendIds.forEach((friendId) => {
+          const targetSocketId = userSocketMap[friendId];
+          if (targetSocketId) {
+            console.log(`Sending spin invite to friend ${friendId} at socket ${targetSocketId}`);
+            io.to(targetSocketId).emit("receive_spin_invite", {
+              sessionId: sessionId,
+              senderName: senderName,
+              invitedFriends: invitedFriends // Forward invited lists so guests render indicators too
+            });
+          } else {
+            console.log(`Friend ${friendId} is not online (no socket found for spin)`);
+          }
+        });
+      });
+
+      // 🚀 Added: Joining Shared Spin Room (Presence Registration)
+      socket.on("join_spin_presence", ({ spinId, userId, username }) => {
+        socket.join(spinId);
+        console.log(`Socket ${socket.id} (User: ${username}/${userId}) joined spin presence room: ${spinId}`);
+        
+        // Save identifiers on socket so we can auto-cleanup on disconnection
+        socket.spinId = spinId;
+        socket.userId = userId;
+
+        if (!activeSpins[spinId]) {
+          activeSpins[spinId] = new Set();
+        }
+        activeSpins[spinId].add(userId);
+
+        // Broadcast updated presence list
+        io.to(spinId).emit("spin_presence_update", Array.from(activeSpins[spinId]));
+      });
+
+      // 🚀 Added: Manual Exit from Shared Spin Room
+      socket.on("leave_spin_presence", ({ spinId, userId }) => {
+        socket.leave(spinId);
+        console.log(`User ${userId} left spin room ${spinId}`);
+
+        if (activeSpins[spinId]) {
+          activeSpins[spinId].delete(userId);
+          io.to(spinId).emit("spin_presence_update", Array.from(activeSpins[spinId]));
+        }
+      });
+
       socket.on("send_message", (data) => {
         const { sessionId, text, senderId, senderName } = data;
 
@@ -105,11 +154,22 @@ async function startServer() {
       });
 
       socket.on("disconnect", () => {
+        // Remove from userSocketMap
         for (const userId in userSocketMap) {
           if (userSocketMap[userId] === socket.id) {
             console.log(`User ${userId} disconnected. Removing socket ${socket.id}`);
             delete userSocketMap[userId];
             break;
+          }
+        }
+
+        // 🚀 Added: Auto-cleanup of active spin presence on disconnection
+        if (socket.spinId && socket.userId) {
+          const { spinId, userId } = socket;
+          if (activeSpins[spinId]) {
+            activeSpins[spinId].delete(userId);
+            io.to(spinId).emit("spin_presence_update", Array.from(activeSpins[spinId]));
+            console.log(`User ${userId} disconnected. Removed from spin presence room ${spinId}`);
           }
         }
       });
