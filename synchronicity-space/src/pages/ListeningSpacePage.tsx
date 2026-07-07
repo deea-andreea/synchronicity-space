@@ -4,6 +4,7 @@ import './ListeningSpacePage.css';
 import { getFriends } from '../api/authApi';
 import { io } from 'socket.io-client';
 import { API_BASE_URL } from '../config';
+import Avatar from '../components/Avatar';
 
 export const socket = io(API_BASE_URL, {
   withCredentials: true,
@@ -33,6 +34,12 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
   const [spinHostName, setSpinHostName] = useState<string>(() => {
     return localStorage.getItem('spin_host_name') || "host";
   });
+
+  // --- AVATAR STATES ---
+  const [avatarPositions, setAvatarPositions] = useState<Record<string, { x: number, y: number, name: string, type: 'boy' | 'girl' }>>({});
+  const [myAvatarType] = useState<'boy' | 'girl'>(() => (localStorage.getItem('user_avatar') as 'boy' | 'girl') || 'boy');
+  const [myName] = useState(() => localStorage.getItem('user_display_name') || currentUser?.username || "Guest");
+
 
   // --- VINYL PLAYER STATES ---
   const [playingAlbum, setPlayingAlbum] = useState<any | null>(null);
@@ -85,10 +92,18 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       socket.on("receive_message", (msg) => {
         setMessages((prev) => [...prev, msg]);
       });
+
+      socket.on("avatar_moved", (data) => {
+        setAvatarPositions((prev) => ({
+          ...prev,
+          [data.userId]: { x: data.x, y: data.y, name: data.name, type: data.type }
+        }));
+      });
     }
 
     return () => {
       socket.off("receive_message");
+      socket.off("avatar_moved");
     };
   }, [isSessionActive, currentSessionId]);
 
@@ -114,6 +129,13 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
         setPlayingAlbum(album);
         setCurrentTrackIndex(trackIndex);
       });
+
+      socket.on("avatar_moved", (data) => {
+        setAvatarPositions((prev) => ({
+          ...prev,
+          [data.userId]: { x: data.x, y: data.y, name: data.name, type: data.type }
+        }));
+      });
     }
 
     return () => {
@@ -122,6 +144,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       }
       socket.off("spin_presence_update");
       socket.off("receive_playback_sync");
+      socket.off("avatar_moved");
     };
   }, [isSpinActive, currentSpinId, currentUser?.id, currentUser?.username]);
 
@@ -574,7 +597,24 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       </div>
 
       {/* ORIGINAL ROOM STAGE (STRUCTURE UNTOUCHED) */}
-      <div className="room-stage">
+      <div className="room-stage" onClick={(e) => {
+        if (!isSessionActive && !isSpinActive) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        // Don't move if clicking too high (above the floor area)
+        const screenH = window.innerHeight || 800;
+        if (y < screenH * 0.3) return;
+
+        setAvatarPositions(prev => ({
+          ...prev,
+          [currentUser.id]: { ...prev[currentUser.id], x, y, name: myName, type: myAvatarType }
+        }));
+
+        const roomId = isSessionActive ? currentSessionId : currentSpinId;
+        socket.emit("move_avatar", { roomId, userId: currentUser.id, x, y, name: myName, type: myAvatarType });
+      }}>
         <button className="back-home-btn" onClick={() => navigate("/home")}>
           ← BACK TO HOME
         </button>
@@ -591,6 +631,33 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
           <div className="floor"><div className="floor-texture-layer"></div></div>
           <div className="ceiling"></div>
         </div>
+
+        {/* RENDER AVATARS */}
+        {(isSessionActive || isSpinActive) && (
+          <>
+            {/* Render my own avatar explicitly if not in positions yet, or render from positions */}
+            <Avatar 
+              type={avatarPositions[currentUser.id]?.type || myAvatarType} 
+              name={avatarPositions[currentUser.id]?.name || myName} 
+              targetX={avatarPositions[currentUser.id]?.x || window.innerWidth / 2} 
+              targetY={avatarPositions[currentUser.id]?.y || window.innerHeight - 100} 
+              isMe={true} 
+            />
+            {Object.entries(avatarPositions).map(([userId, pos]) => {
+              if (userId === currentUser.id) return null;
+              return (
+                <Avatar 
+                  key={userId}
+                  type={pos.type} 
+                  name={pos.name} 
+                  targetX={pos.x} 
+                  targetY={pos.y} 
+                  isMe={false} 
+                />
+              );
+            })}
+          </>
+        )}
       </div>
     </div>
   );

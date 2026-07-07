@@ -1,0 +1,28 @@
+.avatar-container {
+  position: absolute;
+  pointer-events: none;
+  transition: transform 0.1s linear;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.avatar-container img {
+  height: 200px;
+  object-fit: contain;
+}
+
+.avatar-name {
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-bottom: 5px;
+  text-shadow: 1px 1px 2px #000;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.avatar-container.is-me .avatar-name {
+  background: rgba(255, 100, 100, 0.7);
+}

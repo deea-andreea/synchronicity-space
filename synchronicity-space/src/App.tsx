@@ -18,6 +18,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { jwtDecode } from "jwt-decode";
 import { getCookie } from "./utils/cookies";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
+import UserPage from "./pages/UserPage";
 import { API_BASE_URL } from "./config";
 import { addAlbumToLibrary, removeAlbumFromLibrary } from "./api/albumsApi";
 
@@ -236,6 +237,13 @@ export default function App() {
           <Route path="login" element={<LoginPage setCurrentUser={setCurrentUser}/>} />
           <Route path="register" element={<RegisterPage />} />
           <Route path="verify-email" element={<VerifyEmailPage />} />
+          <Route path="user" element={
+            hasFrontendPermission("view_library") ? (
+              <UserPage currentUser={currentUser} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } />
           
           <Route path="forgot-password" element={<ForgotPasswordPage />} />
           <Route path="reset-password" element={<ResetPasswordPage />} />

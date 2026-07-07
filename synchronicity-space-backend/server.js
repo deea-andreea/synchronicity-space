@@ -71,6 +71,20 @@ async function startServer() {
       });
       
 
+      socket.on("join_session", (sessionId) => {
+        socket.join(sessionId);
+        console.log(`Socket ${socket.id} joined session ${sessionId}`);
+      });
+
+      socket.on("move_avatar", (data) => {
+        // Broadcast to everyone in the room (session or spin)
+        io.to(data.roomId).emit("avatar_moved", data);
+      });
+
+      socket.on("send_message", (msgData) => {
+        io.to(msgData.sessionId).emit("receive_message", msgData);
+      });
+
       socket.on("send_invite", ({ senderName, friendIds, sessionId }) => {
         console.log(`Invite from ${senderName} to friends:`, friendIds);
         friendIds.forEach((friendId) => {
