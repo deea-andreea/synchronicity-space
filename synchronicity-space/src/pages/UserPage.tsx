@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
 
 export default function UserPage({ currentUser }: { currentUser: any }) {
-  const [name, setName] = useState(localStorage.getItem('user_display_name') || currentUser?.username || "Guest");
-  const [avatar, setAvatar] = useState<'boy' | 'girl'>((localStorage.getItem('user_avatar') as 'boy' | 'girl') || 'boy');
+  const [name, setName] = useState(currentUser?.username || localStorage.getItem('user_display_name') || "Guest");
+  const [avatar, setAvatar] = useState<'boy' | 'girl'>(currentUser?.avatar || (localStorage.getItem('user_avatar') as 'boy' | 'girl') || 'boy');
   const navigate = useNavigate();
 
   const handleSave = async () => {
@@ -52,7 +52,7 @@ export default function UserPage({ currentUser }: { currentUser: any }) {
             onClick={() => setAvatar('girl')}
           >
             <div className="avatar-preview">
-              <img src="/girl/image 40.svg" alt="Girl Avatar" />
+              <img src="/girl/front_idle.svg" alt="Girl Avatar" />
             </div>
             <span>Girl</span>
           </div>
@@ -62,7 +62,7 @@ export default function UserPage({ currentUser }: { currentUser: any }) {
             onClick={() => setAvatar('boy')}
           >
             <div className="avatar-preview">
-              <img src="/boy/image 41.svg" alt="Boy Avatar" />
+              <img src="/boy/front_idle.svg" alt="Boy Avatar" />
             </div>
             <span>Boy</span>
           </div>

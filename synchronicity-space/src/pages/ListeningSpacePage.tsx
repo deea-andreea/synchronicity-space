@@ -37,8 +37,13 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
 
   // --- AVATAR STATES ---
   const [avatarPositions, setAvatarPositions] = useState<Record<string, { x: number, y: number, name: string, type: 'boy' | 'girl', direction?: string, isWalking?: boolean }>>({});
-  const [myAvatarType] = useState<'boy' | 'girl'>(() => (localStorage.getItem('user_avatar') as 'boy' | 'girl') || 'boy');
-  const [myName] = useState(() => localStorage.getItem('user_display_name') || currentUser?.username || "Guest");
+  const [myAvatarType] = useState<'boy' | 'girl'>(() => currentUser?.avatar || (localStorage.getItem('user_avatar') as 'boy' | 'girl') || 'boy');
+  const [myName] = useState(() => currentUser?.username || localStorage.getItem('user_display_name') || "Guest");
+  
+  // Track my latest position in a ref to avoid dependency cycles when broadcasting to new users
+  const myPosRef = useRef<{x: number, y: number, direction: string, isWalking: boolean}>({
+    x: window.innerWidth / 2, y: window.innerHeight - 100, direction: 'down', isWalking: false
+  });
 
   // --- POLL STATES ---
   const [pollSuggestions, setPollSuggestions] = useState<{ userId: string, username: string, track: any, album: any, trackIndex: number, votes: string[] }[]>([]);
@@ -155,10 +160,27 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       }
       socket.off("spin_presence_update");
       socket.off("receive_playback_sync");
+      socket.off("receive_playback_sync");
       socket.off("avatar_moved");
       socket.off("sync_poll");
     };
   }, [isSpinActive, currentSpinId, currentUser?.id, currentUser?.username]);
+
+  // Broadcast my position to everyone whenever the room membership changes (so new joiners can see me)
+  useEffect(() => {
+    if (isSpinActive && currentSpinId && currentUser) {
+      socket.emit("move_avatar", {
+        roomId: currentSpinId,
+        userId: currentUser.id,
+        x: myPosRef.current.x,
+        y: myPosRef.current.y,
+        name: myName,
+        type: myAvatarType,
+        direction: myPosRef.current.direction,
+        isWalking: myPosRef.current.isWalking
+      });
+    }
+  }, [activeSpinUsers, isSpinActive, currentSpinId, currentUser, myName, myAvatarType]);
 
   // --- LISTENERS FOR INVITES ---
   useEffect(() => {
@@ -729,6 +751,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
               isMe={true} 
               onMove={(x, y, dir, isWalking) => {
                 if (!isSessionActive && !isSpinActive) return;
+                myPosRef.current = { x, y, direction: dir, isWalking };
                 const roomId = isSessionActive ? currentSessionId : currentSpinId;
                 socket.emit("move_avatar", { roomId, userId: currentUser.id, x, y, name: myName, type: myAvatarType, direction: dir, isWalking });
               }}
