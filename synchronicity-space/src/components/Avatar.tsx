@@ -1,67 +1,117 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Avatar.css';
 
 const girlFrames = [
-  'image 40.svg', 'image 42.svg', 'image 43.svg', 'image 44.svg',
-  'image 45.svg', 'image 46.svg', 'image 47.svg', 'image 49.svg',
-  'image 50.svg', 'image 51.svg', 'image 52.svg', 'image 53.svg'
+  'image 40.svg', 'image 42.svg', 'image 43.svg', // down
+  'image 44.svg', 'image 45.svg', 'image 46.svg', // left
+  'image 47.svg', 'image 49.svg', 'image 50.svg', // right
+  'image 51.svg', 'image 52.svg', 'image 53.svg'  // up
 ];
 
 const boyFrames = [
-  'image 41.svg', 'image 54.svg', 'image 55.svg', 'image 56.svg',
-  'image 57.svg', 'image 58.svg', 'image 59.svg', 'image 60.svg',
-  'image 61.svg', 'image 62.svg', 'image 63.svg', 'image 64.svg'
+  'image 41.svg', 'image 54.svg', 'image 55.svg', // down
+  'image 56.svg', 'image 57.svg', 'image 58.svg', // left
+  'image 59.svg', 'image 60.svg', 'image 61.svg', // right
+  'image 62.svg', 'image 63.svg', 'image 64.svg'  // up
 ];
 
-export default function Avatar({ type, name, targetX, targetY, isMe }: { type: 'boy' | 'girl', name: string, targetX: number, targetY: number, isMe: boolean }) {
-  // Use initial target position or center bottom
+export default function Avatar({ type, name, targetX, targetY, isMe, targetDirection, targetIsWalking, onMove }: { 
+  type: 'boy' | 'girl', name: string, targetX: number, targetY: number, isMe: boolean, 
+  targetDirection?: string, targetIsWalking?: boolean, onMove?: (x: number, y: number, dir: string, walk: boolean) => void 
+}) {
   const [pos, setPos] = useState({ x: targetX || window.innerWidth / 2, y: targetY || window.innerHeight - 100 });
   const [frameIdx, setFrameIdx] = useState(0);
   const [isWalking, setIsWalking] = useState(false);
-  const [scaleX, setScaleX] = useState(1);
+  const [direction, setDirection] = useState<'down'|'left'|'right'|'up'>('down');
 
   const frames = type === 'girl' ? girlFrames : boyFrames;
+  
+  const getFramesForDir = (dir: string) => {
+    switch(dir) {
+      case 'down': return frames.slice(0, 3);
+      case 'left': return frames.slice(3, 6);
+      case 'right': return frames.slice(6, 9);
+      case 'up': return frames.slice(9, 12);
+      default: return frames.slice(0, 3);
+    }
+  };
+
+  const currentFrames = getFramesForDir(direction);
 
   useEffect(() => {
     let interval: any;
     if (isWalking) {
       interval = setInterval(() => {
-        setFrameIdx((prev) => (prev + 1) % frames.length);
-      }, 100);
+        setFrameIdx((prev) => (prev + 1) % currentFrames.length);
+      }, 150);
     } else {
       setFrameIdx(0);
     }
     return () => clearInterval(interval);
-  }, [isWalking, frames.length]);
+  }, [isWalking, currentFrames.length]);
 
+  // Handle remote updates for other users
   useEffect(() => {
-    if (!targetX || !targetY) return;
-    
-    const dx = targetX - pos.x;
-    const dy = targetY - pos.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (isMe) return;
+    setPos({ x: targetX, y: targetY });
+    if (targetDirection) setDirection(targetDirection as any);
+    if (targetIsWalking !== undefined) setIsWalking(targetIsWalking);
+  }, [targetX, targetY, targetDirection, targetIsWalking, isMe]);
 
-    if (dist < 5) {
-      if (isWalking) setIsWalking(false);
-      return;
-    }
+  // Handle local keyboard movement
+  useEffect(() => {
+    if (!isMe) return;
 
-    if (!isWalking) setIsWalking(true);
-    if (dx < 0 && scaleX !== -1) setScaleX(-1);
-    else if (dx > 0 && scaleX !== 1) setScaleX(1);
+    const keys: Record<string, boolean> = {};
+    const handleKeyDown = (e: KeyboardEvent) => { keys[e.key] = true; };
+    const handleKeyUp = (e: KeyboardEvent) => { keys[e.key] = false; };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
 
     const speed = 4;
-    const ratio = speed / dist;
+    let frameId: number;
+    let lastEmitTime = 0;
 
-    const timeout = setTimeout(() => {
-      setPos({
-        x: pos.x + dx * ratio,
-        y: pos.y + dy * ratio
+    const update = () => {
+      let dx = 0, dy = 0;
+      let newDir = direction;
+      if (keys['ArrowUp'] || keys['w']) { dy -= speed; newDir = 'up'; }
+      if (keys['ArrowDown'] || keys['s']) { dy += speed; newDir = 'down'; }
+      if (keys['ArrowLeft'] || keys['a']) { dx -= speed; newDir = 'left'; }
+      if (keys['ArrowRight'] || keys['d']) { dx += speed; newDir = 'right'; }
+      
+      const isWalk = (dx !== 0 || dy !== 0);
+
+      setPos(p => {
+        let nx = p.x + dx;
+        let ny = p.y + dy;
+        const screenH = window.innerHeight || 800;
+        if (ny < screenH * 0.3) ny = screenH * 0.3; // Floor boundary
+        if (nx !== p.x || ny !== p.y || isWalk !== isWalking || newDir !== direction) {
+          setIsWalking(isWalk);
+          setDirection(newDir);
+          
+          const now = Date.now();
+          if (now - lastEmitTime > 50 && onMove) {
+            onMove(nx, ny, newDir, isWalk);
+            lastEmitTime = now;
+          }
+        } else if (!isWalk && isWalking) {
+           setIsWalking(false);
+           if (onMove) onMove(nx, ny, newDir, false);
+        }
+        return { x: nx, y: ny };
       });
-    }, 16);
-
-    return () => clearTimeout(timeout);
-  }, [targetX, targetY, pos, isWalking, scaleX]);
+      frameId = requestAnimationFrame(update);
+    };
+    frameId = requestAnimationFrame(update);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      cancelAnimationFrame(frameId);
+    };
+  }, [isMe, direction, isWalking, onMove]);
 
   const screenH = window.innerHeight || 800;
   const minY = screenH * 0.4;
@@ -82,8 +132,7 @@ export default function Avatar({ type, name, targetX, targetY, isMe }: { type: '
     >
       <div className="avatar-name">{name}</div>
       <img 
-        src={`/${type}/${frames[frameIdx]}`} 
-        style={{ transform: `scaleX(${scaleX})` }}
+        src={`/${type}/${currentFrames[frameIdx]}`} 
         alt="avatar" 
       />
     </div>

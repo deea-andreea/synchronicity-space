@@ -36,10 +36,12 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
   });
 
   // --- AVATAR STATES ---
-  const [avatarPositions, setAvatarPositions] = useState<Record<string, { x: number, y: number, name: string, type: 'boy' | 'girl' }>>({});
+  const [avatarPositions, setAvatarPositions] = useState<Record<string, { x: number, y: number, name: string, type: 'boy' | 'girl', direction?: string, isWalking?: boolean }>>({});
   const [myAvatarType] = useState<'boy' | 'girl'>(() => (localStorage.getItem('user_avatar') as 'boy' | 'girl') || 'boy');
   const [myName] = useState(() => localStorage.getItem('user_display_name') || currentUser?.username || "Guest");
 
+  // --- POLL STATES ---
+  const [pollSuggestions, setPollSuggestions] = useState<{ userId: string, username: string, track: any, album: any, trackIndex: number, votes: string[] }[]>([]);
 
   // --- VINYL PLAYER STATES ---
   const [playingAlbum, setPlayingAlbum] = useState<any | null>(null);
@@ -96,14 +98,19 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       socket.on("avatar_moved", (data) => {
         setAvatarPositions((prev) => ({
           ...prev,
-          [data.userId]: { x: data.x, y: data.y, name: data.name, type: data.type }
+          [data.userId]: { x: data.x, y: data.y, name: data.name, type: data.type, direction: data.direction, isWalking: data.isWalking }
         }));
+      });
+
+      socket.on("sync_poll", (suggestions) => {
+        setPollSuggestions(suggestions);
       });
     }
 
     return () => {
       socket.off("receive_message");
       socket.off("avatar_moved");
+      socket.off("sync_poll");
     };
   }, [isSessionActive, currentSessionId]);
 
@@ -133,8 +140,12 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       socket.on("avatar_moved", (data) => {
         setAvatarPositions((prev) => ({
           ...prev,
-          [data.userId]: { x: data.x, y: data.y, name: data.name, type: data.type }
+          [data.userId]: { x: data.x, y: data.y, name: data.name, type: data.type, direction: data.direction, isWalking: data.isWalking }
         }));
+      });
+
+      socket.on("sync_poll", (suggestions) => {
+        setPollSuggestions(suggestions);
       });
     }
 
@@ -145,6 +156,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       socket.off("spin_presence_update");
       socket.off("receive_playback_sync");
       socket.off("avatar_moved");
+      socket.off("sync_poll");
     };
   }, [isSpinActive, currentSpinId, currentUser?.id, currentUser?.username]);
 
@@ -307,10 +319,57 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
   };
 
   const handleNextTrack = () => {
+    // If poll has suggestions, play the winner instead
+    if (pollSuggestions.length > 0) {
+      let winner = pollSuggestions[0];
+      for (const s of pollSuggestions) {
+        if (s.votes.length > winner.votes.length) winner = s;
+      }
+      handlePlayAlbum(winner.album, winner.trackIndex);
+      
+      // Clear poll
+      setPollSuggestions([]);
+      const roomId = isSessionActive ? currentSessionId : currentSpinId;
+      socket.emit("sync_poll", { roomId, suggestions: [] });
+      return;
+    }
+
     if (playingAlbum && currentTrackIndex < playingAlbum.Tracks.length - 1) {
       const nextIndex = currentTrackIndex + 1;
       handlePlayAlbum(playingAlbum, nextIndex);
     }
+  };
+
+  const handleSuggestTrack = (album: any, trackIndex: number) => {
+    if (pollSuggestions.length >= 10) return;
+    if (pollSuggestions.some(s => String(s.userId) === String(currentUser.id))) return;
+    const newSuggestions = [...pollSuggestions, { 
+      userId: currentUser.id, 
+      username: currentUser.username, 
+      track: album.Tracks[trackIndex], 
+      album, 
+      trackIndex, 
+      votes: [] 
+    }];
+    setPollSuggestions(newSuggestions);
+    const roomId = isSessionActive ? currentSessionId : currentSpinId;
+    socket.emit("sync_poll", { roomId, suggestions: newSuggestions });
+  };
+
+  const handleVote = (suggestionUserId: string) => {
+    const newSuggestions = pollSuggestions.map(s => {
+      if (String(s.userId) === String(suggestionUserId)) {
+        if (!s.votes.includes(currentUser.id)) {
+          return { ...s, votes: [...s.votes, currentUser.id] };
+        } else {
+          return { ...s, votes: s.votes.filter(id => id !== currentUser.id) };
+        }
+      }
+      return s;
+    });
+    setPollSuggestions(newSuggestions);
+    const roomId = isSessionActive ? currentSessionId : currentSpinId;
+    socket.emit("sync_poll", { roomId, suggestions: newSuggestions });
   };
 
   const handlePrevTrack = () => {
@@ -346,7 +405,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
   const hostId = currentSpinId.startsWith("spin-") ? currentSpinId.split('-')[1] : null;
 
   const offlineFriends = invitedFriendsData.filter(friend => {
-    if (friend.id === currentUser.id) return false;
+    if (String(friend.id) === String(currentUser.id)) return false;
     return !activeSpinUsers.includes(friend.id);
   });
 
@@ -502,7 +561,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
           </div>
 
           {/* Render active Host if we are a guest */}
-          {hostId && hostId !== currentUser.id && activeSpinUsers.includes(hostId) && (
+          {hostId && String(hostId) !== String(currentUser.id) && activeSpinUsers.includes(hostId) && (
             <div className="presence-card active">
               <div className="status-indicator"></div>
               <span className="username">{spinHostName}</span>
@@ -512,7 +571,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
 
           {/* Render other active friends */}
           {friends
-            .filter(friend => friend.id !== currentUser.id && activeSpinUsers.includes(friend.id) && friend.id !== hostId)
+            .filter(friend => String(friend.id) !== String(currentUser.id) && activeSpinUsers.includes(friend.id) && String(friend.id) !== String(hostId))
             .map(friend => (
               <div key={friend.id} className="presence-card active">
                 <div className="status-indicator"></div>
@@ -523,7 +582,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
           }
 
           {/* Render offline invited friends (including offline host if disconnected) */}
-          {hostId && hostId !== currentUser.id && !activeSpinUsers.includes(hostId) && (
+          {hostId && String(hostId) !== String(currentUser.id) && !activeSpinUsers.includes(hostId) && (
             <div className="presence-card inactive">
               <div className="status-indicator"></div>
               <span className="username">{spinHostName}</span>
@@ -538,6 +597,49 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
               <span className="badge">OFFLINE</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* SONG POLL UI */}
+      {(isSessionActive || isSpinActive) && (
+        <div className="poll-container" style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.8)', padding: '15px', borderRadius: '10px', zIndex: 1000, color: 'white', maxWidth: '300px' }}>
+          <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', borderBottom: '1px solid #444', paddingBottom: '5px' }}>Up Next Poll</h3>
+          {pollSuggestions.length < 10 && !pollSuggestions.some(s => String(s.userId) === String(currentUser.id)) && (
+            <div className="suggest-section" style={{ marginBottom: '10px' }}>
+              <select style={{ width: '100%', padding: '5px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '5px' }} onChange={(e) => {
+                const parts = e.target.value.split('-');
+                if (parts.length === 2) {
+                   const albumId = parts[0];
+                   const trackIdx = parseInt(parts[1]);
+                   const album = albums.find(a => String(a.id) === albumId);
+                   if (album) handleSuggestTrack(album, trackIdx);
+                   e.target.value = "";
+                }
+              }} defaultValue="">
+                <option value="" disabled>Suggest a track...</option>
+                {albums.map(a => 
+                  a.Tracks?.map((t: any, idx: number) => (
+                    <option key={`${a.id}-${idx}`} value={`${a.id}-${idx}`}>{a.title} - {t.title}</option>
+                  ))
+                )}
+              </select>
+            </div>
+          )}
+          <div className="suggestions-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+            {pollSuggestions.map(s => (
+              <div key={s.userId} className="suggestion-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', background: '#333', padding: '8px', borderRadius: '5px' }}>
+                <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginRight: '10px' }}>
+                  {s.track?.title || "Unknown"} <small style={{color:'#aaa'}}>({s.username})</small>
+                </span>
+                <button 
+                  onClick={() => handleVote(s.userId)}
+                  style={{ background: s.votes.includes(currentUser.id) ? '#f39c12' : '#555', color: '#fff', border: 'none', borderRadius: '3px', padding: '4px 8px', cursor: 'pointer' }}
+                >
+                  Vote {s.votes.length} {s.votes.includes(currentUser.id) ? "★" : "☆"}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -597,24 +699,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       </div>
 
       {/* ORIGINAL ROOM STAGE (STRUCTURE UNTOUCHED) */}
-      <div className="room-stage" onClick={(e) => {
-        if (!isSessionActive && !isSpinActive) return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        // Don't move if clicking too high (above the floor area)
-        const screenH = window.innerHeight || 800;
-        if (y < screenH * 0.3) return;
-
-        setAvatarPositions(prev => ({
-          ...prev,
-          [currentUser.id]: { ...prev[currentUser.id], x, y, name: myName, type: myAvatarType }
-        }));
-
-        const roomId = isSessionActive ? currentSessionId : currentSpinId;
-        socket.emit("move_avatar", { roomId, userId: currentUser.id, x, y, name: myName, type: myAvatarType });
-      }}>
+      <div className="room-stage">
         <button className="back-home-btn" onClick={() => navigate("/home")}>
           ← BACK TO HOME
         </button>
@@ -642,9 +727,14 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
               targetX={avatarPositions[currentUser.id]?.x || window.innerWidth / 2} 
               targetY={avatarPositions[currentUser.id]?.y || window.innerHeight - 100} 
               isMe={true} 
+              onMove={(x, y, dir, isWalking) => {
+                if (!isSessionActive && !isSpinActive) return;
+                const roomId = isSessionActive ? currentSessionId : currentSpinId;
+                socket.emit("move_avatar", { roomId, userId: currentUser.id, x, y, name: myName, type: myAvatarType, direction: dir, isWalking });
+              }}
             />
             {Object.entries(avatarPositions).map(([userId, pos]) => {
-              if (userId === currentUser.id) return null;
+              if (String(userId) === String(currentUser.id)) return null;
               return (
                 <Avatar 
                   key={userId}
@@ -652,7 +742,9 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
                   name={pos.name} 
                   targetX={pos.x} 
                   targetY={pos.y} 
-                  isMe={false} 
+                  isMe={false}
+                  targetDirection={pos.direction}
+                  targetIsWalking={pos.isWalking}
                 />
               );
             })}

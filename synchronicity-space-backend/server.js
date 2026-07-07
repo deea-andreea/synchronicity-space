@@ -85,6 +85,10 @@ async function startServer() {
         io.to(msgData.sessionId).emit("receive_message", msgData);
       });
 
+      socket.on("sync_poll", (data) => {
+        io.to(data.roomId).emit("sync_poll", data.suggestions);
+      });
+
       socket.on("send_invite", ({ senderName, friendIds, sessionId }) => {
         console.log(`Invite from ${senderName} to friends:`, friendIds);
         friendIds.forEach((friendId) => {
