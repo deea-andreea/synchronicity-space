@@ -252,7 +252,7 @@ export default function App() {
             path="listening-space"
             element={
               hasFrontendPermission("navigate_listening_space") ? (
-                <ListeningSpacePage currentUser={currentUser}/>
+                <ListeningSpacePage currentUser={currentUser} albums={libraryAlbums} />
               ) : (
                 <Navigate to="/home" replace /> 
               )

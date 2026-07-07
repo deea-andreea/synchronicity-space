@@ -402,7 +402,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
   const quickPicks = albums.slice(0, 3);
 
   // Dynamic filter to build offline and other online user presence [1]
-  const hostId = currentSpinId.startsWith("spin-") ? currentSpinId.split('-')[1] : null;
+  const hostId = currentSpinId.startsWith("spin-") ? currentSpinId.substring(5) : null;
 
   const offlineFriends = invitedFriendsData.filter(friend => {
     if (String(friend.id) === String(currentUser.id)) return false;
@@ -602,11 +602,11 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
 
       {/* SONG POLL UI */}
       {(isSessionActive || isSpinActive) && (
-        <div className="poll-container" style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.8)', padding: '15px', borderRadius: '10px', zIndex: 1000, color: 'white', maxWidth: '300px' }}>
-          <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', borderBottom: '1px solid #444', paddingBottom: '5px' }}>Up Next Poll</h3>
+        <div className="poll-container" style={{ position: 'absolute', top: '100px', left: '20px', background: 'rgba(20,20,20,0.85)', backdropFilter: 'blur(10px)', padding: '20px', borderRadius: '12px', zIndex: 1000, color: '#f39c12', width: '300px', border: '2px solid #444', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', fontFamily: "'Courier New', Courier, monospace" }}>
+          <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', borderBottom: '2px solid #444', paddingBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>💿 Up Next Poll</h3>
           {pollSuggestions.length < 10 && !pollSuggestions.some(s => String(s.userId) === String(currentUser.id)) && (
-            <div className="suggest-section" style={{ marginBottom: '10px' }}>
-              <select style={{ width: '100%', padding: '5px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '5px' }} onChange={(e) => {
+            <div className="suggest-section" style={{ marginBottom: '15px' }}>
+              <select style={{ width: '100%', padding: '10px', background: '#111', color: '#f39c12', border: '1px solid #f39c12', borderRadius: '6px', fontFamily: 'inherit', outline: 'none' }} onChange={(e) => {
                 const parts = e.target.value.split('-');
                 if (parts.length === 2) {
                    const albumId = parts[0];
@@ -625,17 +625,17 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
               </select>
             </div>
           )}
-          <div className="suggestions-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+          <div className="suggestions-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '250px', overflowY: 'auto', paddingRight: '5px' }}>
             {pollSuggestions.map(s => (
-              <div key={s.userId} className="suggestion-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', background: '#333', padding: '8px', borderRadius: '5px' }}>
-                <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginRight: '10px' }}>
-                  {s.track?.title || "Unknown"} <small style={{color:'#aaa'}}>({s.username})</small>
+              <div key={s.userId} className="suggestion-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', background: '#222', padding: '10px', borderRadius: '8px', borderLeft: '3px solid #f39c12' }}>
+                <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginRight: '10px', color: '#fff' }}>
+                  {s.track?.title || "Unknown"} <small style={{color:'#888', display: 'block', marginTop: '3px'}}>Suggested by {s.username}</small>
                 </span>
                 <button 
                   onClick={() => handleVote(s.userId)}
-                  style={{ background: s.votes.includes(currentUser.id) ? '#f39c12' : '#555', color: '#fff', border: 'none', borderRadius: '3px', padding: '4px 8px', cursor: 'pointer' }}
+                  style={{ background: s.votes.includes(currentUser.id) ? '#f39c12' : '#444', color: s.votes.includes(currentUser.id) ? '#000' : '#fff', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s' }}
                 >
-                  Vote {s.votes.length} {s.votes.includes(currentUser.id) ? "★" : "☆"}
+                  {s.votes.length} {s.votes.includes(currentUser.id) ? "★" : "☆"}
                 </button>
               </div>
             ))}

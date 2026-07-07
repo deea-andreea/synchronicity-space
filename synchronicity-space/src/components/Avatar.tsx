@@ -2,17 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import './Avatar.css';
 
 const girlFrames = [
-  'image 40.svg', 'image 42.svg', 'image 43.svg', // down
-  'image 44.svg', 'image 45.svg', 'image 46.svg', // left
-  'image 47.svg', 'image 49.svg', 'image 50.svg', // right
-  'image 51.svg', 'image 52.svg', 'image 53.svg'  // up
+  'front_idle.svg', 'front_walk1.svg', 'front_walk2.svg', // down
+  'left_idle.svg', 'left_walk1.svg', 'left_walk2.svg',    // left
+  'right_idle.svg', 'right_walk1.svg', 'right_walk2.svg', // right
+  'back_idle.svg', 'back_walk1.svg', 'back_walk2.svg'     // up
 ];
 
 const boyFrames = [
-  'image 41.svg', 'image 54.svg', 'image 55.svg', // down
-  'image 56.svg', 'image 57.svg', 'image 58.svg', // left
-  'image 59.svg', 'image 60.svg', 'image 61.svg', // right
-  'image 62.svg', 'image 63.svg', 'image 64.svg'  // up
+  'front_idle.svg', 'front_walk1.svg', 'front_walk2.svg', // down
+  'left_idle.svg', 'left_walk1.svg', 'left_walk2.svg',    // left
+  'right_idlw.svg', 'right_walk1.svg', 'right_walk2.svg', // right
+  'back_idle.svg', 'back_walk1.svg', 'back_walk2.svg'     // up
 ];
 
 export default function Avatar({ type, name, targetX, targetY, isMe, targetDirection, targetIsWalking, onMove }: { 
