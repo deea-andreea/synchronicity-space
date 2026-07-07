@@ -37,6 +37,11 @@ export default function Avatar({ type, name, targetX, targetY, isMe, targetDirec
   };
 
   const currentFrames = getFramesForDir(direction);
+  
+  const onMoveRef = useRef(onMove);
+  useEffect(() => {
+    onMoveRef.current = onMove;
+  }, [onMove]);
 
   useEffect(() => {
     let interval: any;
@@ -71,10 +76,13 @@ export default function Avatar({ type, name, targetX, targetY, isMe, targetDirec
     const speed = 4;
     let frameId: number;
     let lastEmitTime = 0;
+    
+    let currentDir = 'down';
+    let currentIsWalking = false;
 
     const update = () => {
       let dx = 0, dy = 0;
-      let newDir = direction;
+      let newDir = currentDir;
       if (keys['ArrowUp'] || keys['w']) { dy -= speed; newDir = 'up'; }
       if (keys['ArrowDown'] || keys['s']) { dy += speed; newDir = 'down'; }
       if (keys['ArrowLeft'] || keys['a']) { dx -= speed; newDir = 'left'; }
@@ -87,18 +95,21 @@ export default function Avatar({ type, name, targetX, targetY, isMe, targetDirec
         let ny = p.y + dy;
         const screenH = window.innerHeight || 800;
         if (ny < screenH * 0.3) ny = screenH * 0.3; // Floor boundary
-        if (nx !== p.x || ny !== p.y || isWalk !== isWalking || newDir !== direction) {
+        if (nx !== p.x || ny !== p.y || isWalk !== currentIsWalking || newDir !== currentDir) {
+          currentIsWalking = isWalk;
+          currentDir = newDir;
           setIsWalking(isWalk);
-          setDirection(newDir);
+          setDirection(newDir as any);
           
           const now = Date.now();
-          if (now - lastEmitTime > 50 && onMove) {
-            onMove(nx, ny, newDir, isWalk);
+          if (now - lastEmitTime > 50 && onMoveRef.current) {
+            onMoveRef.current(nx, ny, newDir, isWalk);
             lastEmitTime = now;
           }
-        } else if (!isWalk && isWalking) {
+        } else if (!isWalk && currentIsWalking) {
+           currentIsWalking = false;
            setIsWalking(false);
-           if (onMove) onMove(nx, ny, newDir, false);
+           if (onMoveRef.current) onMoveRef.current(nx, ny, newDir, false);
         }
         return { x: nx, y: ny };
       });
@@ -111,7 +122,7 @@ export default function Avatar({ type, name, targetX, targetY, isMe, targetDirec
       window.removeEventListener('keyup', handleKeyUp);
       cancelAnimationFrame(frameId);
     };
-  }, [isMe, direction, isWalking, onMove]);
+  }, [isMe]);
 
   const screenH = window.innerHeight || 800;
   const minY = screenH * 0.4;

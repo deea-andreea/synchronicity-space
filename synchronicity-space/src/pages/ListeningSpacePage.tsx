@@ -592,7 +592,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
           )}
 
           {/* Render other active friends */}
-          {friends
+          {invitedFriendsData
             .filter(friend => String(friend.id) !== String(currentUser.id) && activeSpinUsers.includes(friend.id) && String(friend.id) !== String(hostId))
             .map(friend => (
               <div key={friend.id} className="presence-card active">
@@ -752,8 +752,13 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
               onMove={(x, y, dir, isWalking) => {
                 if (!isSessionActive && !isSpinActive) return;
                 myPosRef.current = { x, y, direction: dir, isWalking };
-                const roomId = isSessionActive ? currentSessionId : currentSpinId;
-                socket.emit("move_avatar", { roomId, userId: currentUser.id, x, y, name: myName, type: myAvatarType, direction: dir, isWalking });
+                
+                if (isSessionActive && currentSessionId) {
+                  socket.emit("move_avatar", { roomId: currentSessionId, userId: currentUser.id, x, y, name: myName, type: myAvatarType, direction: dir, isWalking });
+                }
+                if (isSpinActive && currentSpinId) {
+                  socket.emit("move_avatar", { roomId: currentSpinId, userId: currentUser.id, x, y, name: myName, type: myAvatarType, direction: dir, isWalking });
+                }
               }}
             />
             {Object.entries(avatarPositions).map(([userId, pos]) => {
