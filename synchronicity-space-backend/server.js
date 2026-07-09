@@ -16,7 +16,8 @@ import './src/models/Album.js';  // Replace with your exact path to AlbumModel
 import './src/models/Track.js';
 import './src/models/Chat.js'; // New Chat model
 
-dns.setServers(['8.8.8.8', '1.1.1.0.1']);
+// Fixed: Changed '1.1.1.0.1' to '1.1.1.1'
+dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 const PORT = process.env.PORT || 3000;
 
