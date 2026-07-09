@@ -111,101 +111,71 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
     if (isSessionActive && currentSessionId) {
       console.log("Re-joining chat session room:", currentSessionId);
       socket.emit("join_session", currentSessionId);
-
       socket.on("receive_message", (msg) => {
         setMessages((prev) => [...prev, msg]);
       });
-
-      socket.on("avatar_moved", (data) => {
-        setAvatarPositions((prev) => ({
-          ...prev,
-          [data.userId]: { x: data.x, y: data.y, name: data.name, type: data.type, direction: data.direction, isWalking: data.isWalking }
-        }));
-      });
-
-      socket.on("sync_poll", (suggestions) => {
-        setPollSuggestions(suggestions);
-        localStorage.setItem('poll_suggestions', JSON.stringify(suggestions));
-      });
-
-      socket.on("chat_ready", ({ chatId, messages: history }) => {
-        setActiveChatId(chatId);
-        setProxyChatMessages(history || []);
-        setShowProximityChat(true);
-      });
-
-      socket.on("receive_proximity_message", ({ msg }) => {
-        setProxyChatMessages(prev => [...prev, msg]);
-      });
     }
-
     return () => {
       socket.off("receive_message");
-      socket.off("avatar_moved");
-      socket.off("sync_poll");
-      socket.off("chat_ready");
-      socket.off("receive_proximity_message");
     };
   }, [isSessionActive, currentSessionId]);
 
-  // --- NEW: SHARED SPIN PRESENCE & PLAYBACK SOCKETS ---
+  // --- SHARED SPIN PRESENCE & PLAYBACK SOCKETS ---
   useEffect(() => {
     if (isSpinActive && currentSpinId) {
       console.log("Joining spin presence room:", currentSpinId);
-      
-      socket.emit("join_spin_presence", { 
-        spinId: currentSpinId, 
+      socket.emit("join_spin_presence", {
+        spinId: currentSpinId,
         userId: currentUser.id,
         username: currentUser.username
       });
-
       socket.on("spin_presence_update", (activeUsers: any[]) => {
-        console.log("Presence update received:", activeUsers);
         setActiveSpinUsers(activeUsers);
       });
-
-      // Synchronize Turntable Playback across other devices in the session [1]
       socket.on("receive_playback_sync", ({ album, trackIndex }) => {
-        console.log("Syncing playback from other user:", album?.title, trackIndex);
         setPlayingAlbum(album);
         setCurrentTrackIndex(trackIndex);
       });
-
-      socket.on("avatar_moved", (data) => {
-        setAvatarPositions((prev) => ({
-          ...prev,
-          [data.userId]: { x: data.x, y: data.y, name: data.name, type: data.type, direction: data.direction, isWalking: data.isWalking }
-        }));
-      });
-
-      socket.on("sync_poll", (suggestions) => {
-        setPollSuggestions(suggestions);
-        localStorage.setItem('poll_suggestions', JSON.stringify(suggestions));
-      });
-
-      socket.on("chat_ready", ({ chatId, messages: history }) => {
-        setActiveChatId(chatId);
-        setProxyChatMessages(history || []);
-        setShowProximityChat(true);
-      });
-
-      socket.on("receive_proximity_message", ({ chatId, msg }) => {
-        setProxyChatMessages(prev => [...prev, msg]);
-      });
     }
-
     return () => {
       if (currentSpinId) {
         socket.emit("leave_spin_presence", { spinId: currentSpinId, userId: currentUser.id });
       }
       socket.off("spin_presence_update");
       socket.off("receive_playback_sync");
-      socket.off("avatar_moved");
-      socket.off("sync_poll");
-      socket.off("chat_ready");
-      socket.off("receive_proximity_message");
     };
   }, [isSpinActive, currentSpinId, currentUser?.id, currentUser?.username]);
+
+  // --- SHARED LISTENERS (registered once, always active) ---
+  useEffect(() => {
+    const onAvatarMoved = (data: any) => {
+      setAvatarPositions((prev) => ({
+        ...prev,
+        [data.userId]: { x: data.x, y: data.y, name: data.name, type: data.type, direction: data.direction, isWalking: data.isWalking }
+      }));
+    };
+    const onSyncPoll = (suggestions: any[]) => {
+      setPollSuggestions(suggestions);
+    };
+    const onChatReady = ({ chatId, messages: history }: any) => {
+      setActiveChatId(chatId);
+      setProxyChatMessages(history || []);
+      setShowProximityChat(true);
+    };
+    const onProximityMsg = ({ msg }: any) => {
+      setProxyChatMessages(prev => [...prev, msg]);
+    };
+    socket.on("avatar_moved", onAvatarMoved);
+    socket.on("sync_poll", onSyncPoll);
+    socket.on("chat_ready", onChatReady);
+    socket.on("receive_proximity_message", onProximityMsg);
+    return () => {
+      socket.off("avatar_moved", onAvatarMoved);
+      socket.off("sync_poll", onSyncPoll);
+      socket.off("chat_ready", onChatReady);
+      socket.off("receive_proximity_message", onProximityMsg);
+    };
+  }, []);
 
   // Broadcast my position to everyone whenever the room membership changes (so new joiners can see me)
   useEffect(() => {
@@ -713,11 +683,11 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
 
       {/* SONG POLL UI */}
       {(isSessionActive || isSpinActive) && (
-        <div className="poll-container" style={{ position: 'absolute', top: '100px', left: '20px', background: 'rgba(20,20,20,0.85)', backdropFilter: 'blur(10px)', padding: '20px', borderRadius: '12px', zIndex: 1000, color: '#f39c12', width: '300px', border: '2px solid #444', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', fontFamily: "'Courier New', Courier, monospace" }}>
+        <div className="poll-container" style={{ position: 'absolute', top: '100px', left: '20px', background: 'rgba(20,20,20,0.85)', backdropFilter: 'blur(10px)', padding: '20px', borderRadius: '12px', zIndex: 1000, color: '#ccc', width: '300px', border: '2px solid #444', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', fontFamily: "'Courier New', Courier, monospace" }}>
           <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', borderBottom: '2px solid #444', paddingBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>💿 Up Next Poll</h3>
           {pollSuggestions.length < 10 && !pollSuggestions.some(s => String(s.userId) === String(currentUser.id)) && (
             <div className="suggest-section" style={{ marginBottom: '15px' }}>
-              <select style={{ width: '100%', padding: '10px', background: '#111', color: '#f39c12', border: '1px solid #f39c12', borderRadius: '6px', fontFamily: 'inherit', outline: 'none' }} onChange={(e) => {
+              <select style={{ width: '100%', padding: '10px', background: '#111', color: '#ccc', border: '1px solid #555', borderRadius: '6px', fontFamily: 'inherit', outline: 'none' }} onChange={(e) => {
                 const parts = e.target.value.split('-');
                 if (parts.length === 2) {
                    const albumId = parts[0];
@@ -738,13 +708,13 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
           )}
           <div className="suggestions-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '250px', overflowY: 'auto', paddingRight: '5px' }}>
             {pollSuggestions.map(s => (
-              <div key={s.userId} className="suggestion-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', background: '#222', padding: '10px', borderRadius: '8px', borderLeft: '3px solid #f39c12' }}>
+              <div key={s.userId} className="suggestion-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', background: '#222', padding: '10px', borderRadius: '8px', borderLeft: '3px solid #555' }}>
                 <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginRight: '10px', color: '#fff' }}>
                   {s.track?.title || "Unknown"} <small style={{color:'#888', display: 'block', marginTop: '3px'}}>Suggested by {s.username}</small>
                 </span>
                 <button 
                   onClick={() => handleVote(s.userId)}
-                  style={{ background: s.votes.includes(currentUser.id) ? '#f39c12' : '#444', color: s.votes.includes(currentUser.id) ? '#000' : '#fff', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s' }}
+                  style={{ background: s.votes.includes(currentUser.id) ? '#777' : '#444', color: s.votes.includes(currentUser.id) ? '#fff' : '#aaa', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s' }}
                 >
                   {s.votes.length} {s.votes.includes(currentUser.id) ? "★" : "☆"}
                 </button>
@@ -875,30 +845,30 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
           onClick={handleStartChat}
           style={{
             position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)',
-            zIndex: 2000, background: 'linear-gradient(135deg, #f39c12, #e67e22)',
-            color: '#000', border: 'none', borderRadius: '30px', padding: '12px 28px',
-            fontFamily: "'Courier New', Courier, monospace", fontWeight: 'bold',
-            fontSize: '14px', cursor: 'pointer', letterSpacing: '1px',
-            boxShadow: '0 4px 20px rgba(243,156,18,0.6)', animation: 'pulseBtn 1.5s infinite'
+            zIndex: 2000, background: 'rgba(30,30,30,0.9)',
+            color: '#ccc', border: '1px solid #444', borderRadius: '20px', padding: '10px 24px',
+            fontFamily: "'Courier New', Courier, monospace", fontWeight: 'normal',
+            fontSize: '13px', cursor: 'pointer', letterSpacing: '0.5px',
+            backdropFilter: 'blur(8px)'
           }}
         >
-          💬 START CHAT ({nearbyUserIds.length + 1} people)
+          start chat ({nearbyUserIds.length + 1})
         </button>
       )}
 
       {/* PROXIMITY CHAT PANEL */}
       {showProximityChat && activeChatId && (
         <div style={{
-          position: 'fixed', right: '20px', top: '80px', width: '300px', height: '420px',
-          background: 'rgba(15,15,15,0.95)', backdropFilter: 'blur(12px)',
-          border: '2px solid #f39c12', borderRadius: '14px', zIndex: 2000,
+          position: 'fixed', right: '20px', top: '80px', width: '290px', height: '400px',
+          background: 'rgba(18,18,18,0.97)', backdropFilter: 'blur(12px)',
+          border: '1px solid #333', borderRadius: '10px', zIndex: 2000,
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
-          fontFamily: "'Courier New', Courier, monospace", boxShadow: '0 8px 32px rgba(0,0,0,0.7)'
+          fontFamily: "'Courier New', Courier, monospace", boxShadow: '0 4px 20px rgba(0,0,0,0.6)'
         }}>
           {/* Header */}
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#111' }}>
-            <span style={{ color: '#f39c12', fontWeight: 'bold', fontSize: '13px', letterSpacing: '1px' }}>💬 NEARBY CHAT</span>
-            <button onClick={() => setShowProximityChat(false)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '16px' }}>✖</button>
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid #2a2a2a', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#111' }}>
+            <span style={{ color: '#aaa', fontWeight: 'normal', fontSize: '12px', letterSpacing: '0.5px' }}>nearby chat</span>
+            <button onClick={() => setShowProximityChat(false)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '14px' }}>✖</button>
           </div>
           {/* Messages */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -910,8 +880,8 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
                 <span style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>{String(m.senderId) === String(currentUser.id) ? 'you' : m.senderName}</span>
                 <div style={{
                   maxWidth: '80%', padding: '8px 12px', borderRadius: '10px',
-                  background: String(m.senderId) === String(currentUser.id) ? '#f39c12' : '#2a2a2a',
-                  color: String(m.senderId) === String(currentUser.id) ? '#000' : '#fff',
+                  background: String(m.senderId) === String(currentUser.id) ? '#444' : '#2a2a2a',
+                  color: '#fff',
                   fontSize: '13px', wordBreak: 'break-word'
                 }}>{m.text}</div>
               </div>
@@ -926,7 +896,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
               placeholder="Type a message..."
               style={{ flex: 1, background: '#1a1a1a', border: '1px solid #444', color: '#fff', borderRadius: '6px', padding: '8px 10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }}
             />
-            <button type="submit" style={{ marginLeft: '6px', background: '#f39c12', border: 'none', borderRadius: '6px', padding: '8px 14px', color: '#000', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}>→</button>
+            <button type="submit" style={{ marginLeft: '6px', background: '#555', border: 'none', borderRadius: '6px', padding: '8px 14px', color: '#fff', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}>→</button>
           </form>
         </div>
       )}
