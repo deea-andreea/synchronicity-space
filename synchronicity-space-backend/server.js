@@ -1,9 +1,8 @@
 import app from "./src/app.js";
-import http from "http"; // 🚀 Added this missing import
+import http from "http";
 import https from "https";
 import fs from "fs";
 import { sequelize } from './src/database.js';
-// import { WebSocketServer } from "ws";
 import { setBroadcast } from "./src/routers/generatorRouter.js";
 import { createHandler } from 'graphql-http/lib/use/express';
 import { schema } from './src/graphql/schema.ts';
@@ -11,17 +10,17 @@ import { rootValue } from './src/graphql/resolvers.ts';
 import { connectNoSql } from "./src/nosql.js";
 import { Server } from 'socket.io';
 import dns from 'node:dns';
-import './src/models/User.js';   // Replace with your exact path to UserModel
-import './src/models/Album.js';  // Replace with your exact path to AlbumModel
+import './src/models/User.js';
+import './src/models/Album.js';
 import './src/models/Track.js';
-import './src/models/Chat.js'; // New Chat model
+import './src/models/Chat.js';
 
-// Fixed: Changed '1.1.1.0.1' to '1.1.1.1'
+// Fixed: Correct DNS IP configuration
 dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 const PORT = process.env.PORT || 3000;
 
-let server; // 🚀 Declared the server variable so it doesn't throw a ReferenceError
+let server;
 
 if (process.env.NODE_ENV === 'production') {
   // Render handles the HTTPS/SSL decryption certificate automatically in the cloud.
@@ -62,6 +61,7 @@ async function startServer() {
     await sequelize.authenticate();
     console.log('Database connected successfully.');
     await connectNoSql();
+
     io.on("connection", (socket) => {
       socket.on("register_user", (userId) => {
         userSocketMap[userId] = socket.id;
@@ -86,12 +86,58 @@ async function startServer() {
         io.to(msgData.sessionId).emit("receive_message", msgData);
       });
 
-      socket.on("sync_poll", (data) => {
-        const truncated = [...(data.suggestions || [])]
-          .sort((a, b) => (b.votes?.length || 0) - (a.votes?.length || 0))
-          .slice(0, 10);
-        roomPolls[data.roomId] = truncated;
-        io.to(data.roomId).emit("sync_poll", truncated);
+      // --- Collision-Free Poll Event Handlers ---
+      socket.on("add_suggestion", ({ roomId, suggestion }) => {
+        if (!roomId || !suggestion) return;
+        if (!roomPolls[roomId]) {
+          roomPolls[roomId] = [];
+        }
+
+        // Avoid duplicate suggestions from the same user
+        const alreadyExists = roomPolls[roomId].some(s => String(s.userId) === String(suggestion.userId));
+        if (!alreadyExists) {
+          roomPolls[roomId].push({
+            userId: suggestion.userId,
+            username: suggestion.username,
+            track: suggestion.track,
+            album: suggestion.album,
+            trackIndex: suggestion.trackIndex,
+            votes: []
+          });
+
+          // Sort by votes and keep top 10
+          roomPolls[roomId].sort((a, b) => (b.votes?.length || 0) - (a.votes?.length || 0));
+          roomPolls[roomId] = roomPolls[roomId].slice(0, 10);
+
+          io.to(roomId).emit("sync_poll", roomPolls[roomId]);
+        }
+      });
+
+      socket.on("toggle_vote", ({ roomId, userId, suggestionUserId }) => {
+        if (!roomId || !userId || !suggestionUserId || !roomPolls[roomId]) return;
+
+        roomPolls[roomId] = roomPolls[roomId].map(s => {
+          if (String(s.userId) === String(suggestionUserId)) {
+            const currentVotes = s.votes || [];
+            if (!currentVotes.includes(userId)) {
+              return { ...s, votes: [...currentVotes, userId] };
+            } else {
+              return { ...s, votes: currentVotes.filter(id => id !== userId) };
+            }
+          }
+          return s;
+        });
+
+        // Re-sort after votes change
+        roomPolls[roomId].sort((a, b) => (b.votes?.length || 0) - (a.votes?.length || 0));
+
+        io.to(roomId).emit("sync_poll", roomPolls[roomId]);
+      });
+
+      socket.on("clear_poll", ({ roomId }) => {
+        if (!roomId) return;
+        roomPolls[roomId] = [];
+        io.to(roomId).emit("sync_poll", []);
       });
 
       socket.on("send_invite", ({ senderName, friendIds, sessionId }) => {
@@ -109,8 +155,6 @@ async function startServer() {
           }
         });
       });
-
-      // Spin invite handling unchanged ... (omitted for brevity)
 
       socket.on("join_spin_presence", ({ spinId, userId, username }, cb) => {
         socket.join(spinId);
@@ -206,6 +250,7 @@ async function startServer() {
       });
 
     });
+
     server.listen(PORT, () => {
       if (process.env.NODE_ENV === 'production') {
         console.log(`Production server running and accessible via HTTPS on Render port ${PORT}`);
