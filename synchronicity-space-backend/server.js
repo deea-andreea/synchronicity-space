@@ -142,21 +142,43 @@ async function startServer() {
         socket.to(spinId).emit("receive_playback_sync", { album, trackIndex });
       });
 
-      // ------- New Chat handling -------
+      // ------- Proximity Chat handling -------
       socket.on("request_nearby_chat", async ({ roomId, participants }) => {
         try {
-          const sorted = participants.sort(); // deterministic order
-          // Find existing chat with exact participants set
-          let chat = await import('./src/models/Chat.js').then(m => m.default).then(Chat =>
-            Chat.findOne({ participants: { $all: sorted, $size: sorted.length } })
-          );
+          const Chat = (await import('./src/models/Chat.js')).default;
+          const sorted = [...participants].sort();
+          let chat = await Chat.findOne({ participants: { $all: sorted, $size: sorted.length } });
           if (!chat) {
-            const { default: Chat } = await import('./src/models/Chat.js');
-            chat = await Chat.create({ participants: sorted });
+            chat = await Chat.create({ participants: sorted, messages: [] });
           }
-          socket.emit("chat_ready", { roomId, chatId: chat._id, participants: sorted });
+          const payload = { chatId: String(chat._id), participants: sorted, messages: chat.messages || [] };
+          // Emit chat_ready to every participant who is online
+          sorted.forEach(uid => {
+            const targetSocket = userSocketMap[uid];
+            if (targetSocket) {
+              io.to(targetSocket).emit("chat_ready", payload);
+            }
+          });
         } catch (e) {
           console.error('Chat request error', e);
+        }
+      });
+
+      socket.on("send_proximity_message", async ({ chatId, senderId, senderName, text }) => {
+        try {
+          const Chat = (await import('./src/models/Chat.js')).default;
+          const msg = { senderId, senderName, text, createdAt: new Date() };
+          const chat = await Chat.findByIdAndUpdate(chatId, { $push: { messages: msg } }, { new: true });
+          if (chat) {
+            chat.participants.forEach(uid => {
+              const targetSocket = userSocketMap[uid];
+              if (targetSocket) {
+                io.to(targetSocket).emit("receive_proximity_message", { chatId, msg });
+              }
+            });
+          }
+        } catch (e) {
+          console.error('Proximity message error', e);
         }
       });
 

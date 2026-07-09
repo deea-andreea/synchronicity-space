@@ -51,6 +51,15 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
     return saved ? JSON.parse(saved) : [];
   });
 
+  // --- PROXIMITY CHAT STATES ---
+  const PROXIMITY_THRESHOLD = 150; // pixels
+  const [nearbyUserIds, setNearbyUserIds] = useState<string[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [showProximityChat, setShowProximityChat] = useState(false);
+  const [proxyChatMessages, setProxyChatMessages] = useState<any[]>([]);
+  const [proxyChatInput, setProxyChatInput] = useState('');
+  const proxyChatEndRef = useRef<HTMLDivElement>(null);
+
   // --- VINYL PLAYER STATES ---
   const [playingAlbum, setPlayingAlbum] = useState<any | null>(null);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
@@ -118,14 +127,28 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
         setPollSuggestions(suggestions);
         localStorage.setItem('poll_suggestions', JSON.stringify(suggestions));
       });
+
+      socket.on("chat_ready", ({ chatId, messages: history }) => {
+        setActiveChatId(chatId);
+        setProxyChatMessages(history || []);
+        setShowProximityChat(true);
+      });
+
+      socket.on("receive_proximity_message", ({ chatId, msg }) => {
+        if (activeChatId === chatId || !activeChatId) {
+          setProxyChatMessages(prev => [...prev, msg]);
+        }
+      });
     }
 
     return () => {
       socket.off("receive_message");
       socket.off("avatar_moved");
       socket.off("sync_poll");
+      socket.off("chat_ready");
+      socket.off("receive_proximity_message");
     };
-  }, [isSessionActive, currentSessionId]);
+  }, [isSessionActive, currentSessionId, activeChatId]);
 
   // --- NEW: SHARED SPIN PRESENCE & PLAYBACK SOCKETS ---
   useEffect(() => {
@@ -161,6 +184,16 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
         setPollSuggestions(suggestions);
         localStorage.setItem('poll_suggestions', JSON.stringify(suggestions));
       });
+
+      socket.on("chat_ready", ({ chatId, messages: history }) => {
+        setActiveChatId(chatId);
+        setProxyChatMessages(history || []);
+        setShowProximityChat(true);
+      });
+
+      socket.on("receive_proximity_message", ({ chatId, msg }) => {
+        setProxyChatMessages(prev => [...prev, msg]);
+      });
     }
 
     return () => {
@@ -169,9 +202,10 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       }
       socket.off("spin_presence_update");
       socket.off("receive_playback_sync");
-      socket.off("receive_playback_sync");
       socket.off("avatar_moved");
       socket.off("sync_poll");
+      socket.off("chat_ready");
+      socket.off("receive_proximity_message");
     };
   }, [isSpinActive, currentSpinId, currentUser?.id, currentUser?.username]);
 
@@ -190,6 +224,44 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       });
     }
   }, [activeSpinUsers, isSpinActive, currentSpinId, currentUser, myName, myAvatarType]);
+
+  // --- PROXIMITY DETECTION ---
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const myPos = avatarPositions[currentUser.id];
+    if (!myPos) return;
+    const nearby = Object.entries(avatarPositions)
+      .filter(([uid]) => uid !== String(currentUser.id))
+      .filter(([, pos]) => {
+        const dx = pos.x - myPos.x;
+        const dy = pos.y - myPos.y;
+        return Math.sqrt(dx * dx + dy * dy) < PROXIMITY_THRESHOLD;
+      })
+      .map(([uid]) => uid);
+    setNearbyUserIds(nearby);
+    // Close proximity chat if no one is nearby anymore
+    if (nearby.length === 0) {
+      setShowProximityChat(false);
+    }
+  }, [avatarPositions, currentUser?.id]);
+
+  const handleStartChat = () => {
+    const participants = [String(currentUser.id), ...nearbyUserIds];
+    const roomId = isSpinActive ? currentSpinId : currentSessionId;
+    socket.emit("request_nearby_chat", { roomId, participants });
+  };
+
+  const sendProximityMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!proxyChatInput.trim() || !activeChatId) return;
+    socket.emit("send_proximity_message", {
+      chatId: activeChatId,
+      senderId: currentUser.id,
+      senderName: currentUser.username,
+      text: proxyChatInput
+    });
+    setProxyChatInput('');
+  };
 
   // --- LISTENERS FOR INVITES ---
   useEffect(() => {
@@ -798,6 +870,68 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
           </>
         )}
       </div>
+
+      {/* PROXIMITY CHAT BUTTON */}
+      {(isSessionActive || isSpinActive) && nearbyUserIds.length > 0 && (
+        <button
+          onClick={handleStartChat}
+          style={{
+            position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)',
+            zIndex: 2000, background: 'linear-gradient(135deg, #f39c12, #e67e22)',
+            color: '#000', border: 'none', borderRadius: '30px', padding: '12px 28px',
+            fontFamily: "'Courier New', Courier, monospace", fontWeight: 'bold',
+            fontSize: '14px', cursor: 'pointer', letterSpacing: '1px',
+            boxShadow: '0 4px 20px rgba(243,156,18,0.6)', animation: 'pulseBtn 1.5s infinite'
+          }}
+        >
+          💬 START CHAT ({nearbyUserIds.length + 1} people)
+        </button>
+      )}
+
+      {/* PROXIMITY CHAT PANEL */}
+      {showProximityChat && activeChatId && (
+        <div style={{
+          position: 'fixed', right: '20px', top: '80px', width: '300px', height: '420px',
+          background: 'rgba(15,15,15,0.95)', backdropFilter: 'blur(12px)',
+          border: '2px solid #f39c12', borderRadius: '14px', zIndex: 2000,
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          fontFamily: "'Courier New', Courier, monospace", boxShadow: '0 8px 32px rgba(0,0,0,0.7)'
+        }}>
+          {/* Header */}
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#111' }}>
+            <span style={{ color: '#f39c12', fontWeight: 'bold', fontSize: '13px', letterSpacing: '1px' }}>💬 NEARBY CHAT</span>
+            <button onClick={() => setShowProximityChat(false)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '16px' }}>✖</button>
+          </div>
+          {/* Messages */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {proxyChatMessages.length === 0 && (
+              <p style={{ color: '#555', fontSize: '12px', textAlign: 'center', marginTop: '30px' }}>No messages yet. Say hi!</p>
+            )}
+            {proxyChatMessages.map((m, i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: String(m.senderId) === String(currentUser.id) ? 'flex-end' : 'flex-start' }}>
+                <span style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>{String(m.senderId) === String(currentUser.id) ? 'you' : m.senderName}</span>
+                <div style={{
+                  maxWidth: '80%', padding: '8px 12px', borderRadius: '10px',
+                  background: String(m.senderId) === String(currentUser.id) ? '#f39c12' : '#2a2a2a',
+                  color: String(m.senderId) === String(currentUser.id) ? '#000' : '#fff',
+                  fontSize: '13px', wordBreak: 'break-word'
+                }}>{m.text}</div>
+              </div>
+            ))}
+            <div ref={proxyChatEndRef} />
+          </div>
+          {/* Input */}
+          <form onSubmit={sendProximityMessage} style={{ display: 'flex', borderTop: '1px solid #333', padding: '8px' }}>
+            <input
+              value={proxyChatInput}
+              onChange={e => setProxyChatInput(e.target.value)}
+              placeholder="Type a message..."
+              style={{ flex: 1, background: '#1a1a1a', border: '1px solid #444', color: '#fff', borderRadius: '6px', padding: '8px 10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }}
+            />
+            <button type="submit" style={{ marginLeft: '6px', background: '#f39c12', border: 'none', borderRadius: '6px', padding: '8px 14px', color: '#000', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}>→</button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

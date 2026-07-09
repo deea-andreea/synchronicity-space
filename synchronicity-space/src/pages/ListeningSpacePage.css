@@ -803,3 +803,8 @@
 .wall-playback-btns button:hover {
   background: #555;
 }
+
+@keyframes pulseBtn {
+  0%, 100% { box-shadow: 0 4px 20px rgba(243,156,18,0.6); transform: translateX(-50%) scale(1); }
+  50% { box-shadow: 0 6px 30px rgba(243,156,18,0.9); transform: translateX(-50%) scale(1.04); }
+}
