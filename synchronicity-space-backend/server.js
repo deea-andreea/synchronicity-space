@@ -54,7 +54,8 @@ setBroadcast((payload) => {
 })
 
 const userSocketMap = {};
-const activeSpins = {}; // 🚀 Tracks active users in each spin room: { [spinId]: Set<userId> }
+const activeSpins = {}; // Tracks active users in each spin room: { [spinId]: { [userId]: username } }
+const roomPolls = {};  // Persists poll state per room: { [roomId]: suggestion[] }
 
 async function startServer() {
   try {
@@ -74,6 +75,10 @@ async function startServer() {
       socket.on("join_session", (sessionId) => {
         socket.join(sessionId);
         console.log(`Socket ${socket.id} joined session ${sessionId}`);
+        // Send current poll to the newly joined socket
+        if (roomPolls[sessionId]) {
+          socket.emit("sync_poll", roomPolls[sessionId]);
+        }
       });
 
       socket.on("move_avatar", (data) => {
@@ -86,7 +91,12 @@ async function startServer() {
       });
 
       socket.on("sync_poll", (data) => {
-        io.to(data.roomId).emit("sync_poll", data.suggestions);
+        // Truncate to top 10 by vote count
+        const truncated = [...(data.suggestions || [])]
+          .sort((a, b) => (b.votes?.length || 0) - (a.votes?.length || 0))
+          .slice(0, 10);
+        roomPolls[data.roomId] = truncated;
+        io.to(data.roomId).emit("sync_poll", truncated);
       });
 
       socket.on("send_invite", ({ senderName, friendIds, sessionId }) => {
@@ -138,8 +148,13 @@ async function startServer() {
         }
         activeSpins[spinId][userId] = username;
 
-        // Broadcast list of currently active userIds in the session [1]
+        // Broadcast list of currently active userIds in the session
         io.to(spinId).emit("spin_presence_update", Object.keys(activeSpins[spinId]));
+
+        // Send current poll state to the newly joined socket
+        if (roomPolls[spinId]) {
+          socket.emit("sync_poll", roomPolls[spinId]);
+        }
       });
 
       // Manual Exit from Shared Spin Room

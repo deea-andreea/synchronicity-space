@@ -46,7 +46,10 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
   });
 
   // --- POLL STATES ---
-  const [pollSuggestions, setPollSuggestions] = useState<{ userId: string, username: string, track: any, album: any, trackIndex: number, votes: string[] }[]>([]);
+  const [pollSuggestions, setPollSuggestions] = useState<{ userId: string, username: string, track: any, album: any, trackIndex: number, votes: string[] }[]>(() => {
+    const saved = localStorage.getItem('poll_suggestions');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   // --- VINYL PLAYER STATES ---
   const [playingAlbum, setPlayingAlbum] = useState<any | null>(null);
@@ -63,6 +66,10 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
   useEffect(() => {
     localStorage.setItem('chat_messages', JSON.stringify(messages));
   }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem('poll_suggestions', JSON.stringify(pollSuggestions));
+  }, [pollSuggestions]);
 
   const [currentSessionId, setCurrentSessionId] = useState<string>(() => {
     return localStorage.getItem('active_session_id') || "";
@@ -109,6 +116,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
 
       socket.on("sync_poll", (suggestions) => {
         setPollSuggestions(suggestions);
+        localStorage.setItem('poll_suggestions', JSON.stringify(suggestions));
       });
     }
 
@@ -151,6 +159,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
 
       socket.on("sync_poll", (suggestions) => {
         setPollSuggestions(suggestions);
+        localStorage.setItem('poll_suggestions', JSON.stringify(suggestions));
       });
     }
 
@@ -305,6 +314,8 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
     }
 
     localStorage.removeItem('active_session_id');
+    localStorage.removeItem('poll_suggestions');
+    setPollSuggestions([]);
     setCurrentSessionId("");
     setIsSessionActive(false);
     setMessages([]);
@@ -318,6 +329,8 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
     localStorage.removeItem('active_spin_id');
     localStorage.removeItem('spin_invited_friends');
     localStorage.removeItem('spin_host_name');
+    localStorage.removeItem('poll_suggestions');
+    setPollSuggestions([]);
     setCurrentSpinId("");
     setIsSpinActive(false);
     setInvitedFriendsData([]);
@@ -351,6 +364,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       
       // Clear poll
       setPollSuggestions([]);
+      localStorage.removeItem('poll_suggestions');
       const roomId = isSessionActive ? currentSessionId : currentSpinId;
       socket.emit("sync_poll", { roomId, suggestions: [] });
       return;
@@ -363,19 +377,23 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
   };
 
   const handleSuggestTrack = (album: any, trackIndex: number) => {
-    if (pollSuggestions.length >= 10) return;
     if (pollSuggestions.some(s => String(s.userId) === String(currentUser.id))) return;
-    const newSuggestions = [...pollSuggestions, { 
+    const newSuggestion = { 
       userId: currentUser.id, 
       username: currentUser.username, 
       track: album.Tracks[trackIndex], 
       album, 
       trackIndex, 
       votes: [] 
-    }];
-    setPollSuggestions(newSuggestions);
+    };
+    // Merge with current, sort by votes, keep max 10
+    const merged = [...pollSuggestions, newSuggestion]
+      .sort((a, b) => b.votes.length - a.votes.length)
+      .slice(0, 10);
+    setPollSuggestions(merged);
+    localStorage.setItem('poll_suggestions', JSON.stringify(merged));
     const roomId = isSessionActive ? currentSessionId : currentSpinId;
-    socket.emit("sync_poll", { roomId, suggestions: newSuggestions });
+    socket.emit("sync_poll", { roomId, suggestions: merged });
   };
 
   const handleVote = (suggestionUserId: string) => {
@@ -390,6 +408,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       return s;
     });
     setPollSuggestions(newSuggestions);
+    localStorage.setItem('poll_suggestions', JSON.stringify(newSuggestions));
     const roomId = isSessionActive ? currentSessionId : currentSpinId;
     socket.emit("sync_poll", { roomId, suggestions: newSuggestions });
   };
