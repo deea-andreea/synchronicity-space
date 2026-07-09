@@ -152,10 +152,12 @@ async function startServer() {
             chat = await Chat.create({ participants: sorted, messages: [] });
           }
           const payload = { chatId: String(chat._id), participants: sorted, messages: chat.messages || [] };
-          // Emit chat_ready to every participant who is online
+          // Always reply to the requesting socket first
+          socket.emit("chat_ready", payload);
+          // Also notify other participants who are online
           sorted.forEach(uid => {
             const targetSocket = userSocketMap[uid];
-            if (targetSocket) {
+            if (targetSocket && targetSocket !== socket.id) {
               io.to(targetSocket).emit("chat_ready", payload);
             }
           });
@@ -170,9 +172,11 @@ async function startServer() {
           const msg = { senderId, senderName, text, createdAt: new Date() };
           const chat = await Chat.findByIdAndUpdate(chatId, { $push: { messages: msg } }, { new: true });
           if (chat) {
+            // Always echo to sender's socket
+            socket.emit("receive_proximity_message", { chatId, msg });
             chat.participants.forEach(uid => {
               const targetSocket = userSocketMap[uid];
-              if (targetSocket) {
+              if (targetSocket && targetSocket !== socket.id) {
                 io.to(targetSocket).emit("receive_proximity_message", { chatId, msg });
               }
             });

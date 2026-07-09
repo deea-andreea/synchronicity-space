@@ -134,10 +134,8 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
         setShowProximityChat(true);
       });
 
-      socket.on("receive_proximity_message", ({ chatId, msg }) => {
-        if (activeChatId === chatId || !activeChatId) {
-          setProxyChatMessages(prev => [...prev, msg]);
-        }
+      socket.on("receive_proximity_message", ({ msg }) => {
+        setProxyChatMessages(prev => [...prev, msg]);
       });
     }
 
@@ -148,7 +146,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       socket.off("chat_ready");
       socket.off("receive_proximity_message");
     };
-  }, [isSessionActive, currentSessionId, activeChatId]);
+  }, [isSessionActive, currentSessionId]);
 
   // --- NEW: SHARED SPIN PRESENCE & PLAYBACK SOCKETS ---
   useEffect(() => {
