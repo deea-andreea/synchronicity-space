@@ -93,9 +93,19 @@ async function startServer() {
           roomPolls[roomId] = [];
         }
 
-        // Avoid duplicate suggestions from the same user
-        const alreadyExists = roomPolls[roomId].some(s => String(s.userId) === String(suggestion.userId));
-        if (!alreadyExists) {
+        const existingIndex = roomPolls[roomId].findIndex(s => String(s.userId) === String(suggestion.userId));
+        if (existingIndex !== -1) {
+          // Replace their existing suggestion with the new track, reset votes for the new track
+          roomPolls[roomId][existingIndex] = {
+            userId: suggestion.userId,
+            username: suggestion.username,
+            track: suggestion.track,
+            album: suggestion.album,
+            trackIndex: suggestion.trackIndex,
+            votes: []
+          };
+        } else {
+          // Add as a new suggestion
           roomPolls[roomId].push({
             userId: suggestion.userId,
             username: suggestion.username,
@@ -104,13 +114,13 @@ async function startServer() {
             trackIndex: suggestion.trackIndex,
             votes: []
           });
-
-          // Sort by votes and keep top 10
-          roomPolls[roomId].sort((a, b) => (b.votes?.length || 0) - (a.votes?.length || 0));
-          roomPolls[roomId] = roomPolls[roomId].slice(0, 10);
-
-          io.to(roomId).emit("sync_poll", roomPolls[roomId]);
         }
+
+        // Sort by votes and keep top 10
+        roomPolls[roomId].sort((a, b) => (b.votes?.length || 0) - (a.votes?.length || 0));
+        roomPolls[roomId] = roomPolls[roomId].slice(0, 10);
+
+        io.to(roomId).emit("sync_poll", roomPolls[roomId]);
       });
 
       socket.on("toggle_vote", ({ roomId, userId, suggestionUserId }) => {
