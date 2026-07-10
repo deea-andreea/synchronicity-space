@@ -27,7 +27,7 @@
 .vinyl-section { flex: 1; display: flex; justify-content: center; }
 
 .spinning-vinyl {
-  width: 30vw;
+  width: 35vw;
   animation: spin 15s linear infinite;
 }
 
@@ -58,3 +58,22 @@
 
 .btn-outline { border: 1px solid #333; }
 .btn-outline:hover { border-color: #666; }
+
+/* PresentationPage.css */
+
+/* Restrict the container layout size */
+.landing-content .vinyl-section,
+.landing-content .vinyl-wrapper {
+  width: 200px;  /* Adjust as needed (e.g., down from 300px+) */
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure the vinyl image respects the smaller container boundaries */
+.landing-content .spinning-vinyl {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}

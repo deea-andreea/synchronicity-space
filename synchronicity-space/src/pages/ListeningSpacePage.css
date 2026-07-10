@@ -560,18 +560,6 @@
   z-index: 10;
 }
 
-/* --- WALL PLAYER CONTAINER (RIGHT ALIGNED ON BACK WALL) --- */
-.wall-player-container {
-  position: absolute;
-  top: 15%;
-  right: 8%; /* Right side of back wall */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  transform: translateZ(calc(var(--room-depth) * -1 + 10px));
-  z-index: 10;
-}
 
 /* Wall Turntable Dimensions scaled for room wall */
 .wall-vinyl-section {
@@ -676,16 +664,7 @@
 }
 
 /* --- VIEWPORT POSITIONED VINYL PLAYER (RIGHT SIDE) --- */
-.wall-player-container {
-  position: absolute;
-  top: 22%;
-  right: 20%; /* Safely aligned on the viewport so clicks respond flawlessly */
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
+
 
 /* Isolated spinning disc container (No background turntable casing, no needle arm) */
 .wall-vinyl-section {
@@ -824,7 +803,7 @@
 .wall-player-container {
   position: absolute;
   top: 15%;
-  right: 8%; /* Anchors to the right portion of the back-wall */
+  right: 14%; /* Anchors to the right portion of the back-wall */
   display: flex;
   flex-direction: row; /* Displays vinyl and side-panel side-by-side */
   align-items: center;
