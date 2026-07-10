@@ -808,3 +808,164 @@
   0%, 100% { box-shadow: 0 4px 20px rgba(243,156,18,0.6); transform: translateX(-50%) scale(1); }
   50% { box-shadow: 0 6px 30px rgba(243,156,18,0.9); transform: translateX(-50%) scale(1.04); }
 }
+
+/* --- PRESENCE GRID (LEFT SIDE OF BACK WALL) --- */
+.presence-grid {
+  position: absolute;
+  top: 15%;
+  left: 8%; /* Anchors to the left portion of the back-wall */
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  z-index: 10;
+}
+
+/* --- VINYL PLAYER CONTAINER (RIGHT SIDE OF BACK WALL) --- */
+.wall-player-container {
+  position: absolute;
+  top: 15%;
+  right: 8%; /* Anchors to the right portion of the back-wall */
+  display: flex;
+  flex-direction: row; /* Displays vinyl and side-panel side-by-side */
+  align-items: center;
+  gap: 20px;
+  z-index: 10;
+}
+
+/* --- ISOLATED SPINNING DISC SECTION --- */
+.wall-vinyl-section {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vinyl-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.spinning-vinyl {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.wall-vinyl-label {
+  position: absolute;
+  top: 35%;
+  left: 35%;
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  object-fit: cover;
+  z-index: 5;
+}
+
+/* Disc rotation animation triggers */
+.spinning-vinyl.is-spinning,
+.wall-vinyl-label.is-spinning {
+  animation: spin 8s linear infinite;
+}
+
+/* --- SIDE CONTROLS PANEL --- */
+.wall-side-panel {
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Minimalist Monochrome Playback Controls */
+.wall-playback-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(15, 15, 15, 0.9);
+  border: 1px solid #333;
+  padding: 12px;
+  border-radius: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.wall-track-title {
+  font-size: 0.75rem;
+  color: #ccc;
+  text-align: center;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.wall-playback-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.wall-playback-btns button {
+  background: #222;
+  color: #aaa;
+  border: 1px solid #333;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  transition: all 0.15s ease;
+}
+
+.wall-playback-btns button:hover {
+  background: #333;
+  color: #fff;
+  border-color: #444;
+}
+
+/* Minimalist Monochrome Shelf */
+.wall-record-shelf {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(15, 15, 15, 0.9);
+  border: 1px solid #333;
+  padding: 10px;
+  border-radius: 6px;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.shelf-hint {
+  font-size: 0.65rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.shelf-album-covers {
+  display: flex;
+  gap: 8px;
+}
+
+.shelf-cover {
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  transition: transform 0.15s ease;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.shelf-cover:hover {
+  transform: translateY(-3px);
+}

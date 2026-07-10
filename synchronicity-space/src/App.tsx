@@ -109,7 +109,7 @@ export default function App() {
       clearTimeout(inactivityTimer);
       inactivityTimer = setTimeout(() => {
         logoutUserDueToInactivity();
-      }, 1 * 60 * 1000);
+      }, 1 * 60 * 5000);
     };
 
     window.addEventListener("load", resetInactivityTimer);

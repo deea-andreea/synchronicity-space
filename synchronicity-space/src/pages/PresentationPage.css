@@ -27,7 +27,7 @@
 .vinyl-section { flex: 1; display: flex; justify-content: center; }
 
 .spinning-vinyl {
-  width: 35vw;
+  width: 30vw;
   animation: spin 15s linear infinite;
 }
 
