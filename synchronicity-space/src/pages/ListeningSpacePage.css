@@ -803,7 +803,7 @@
 .wall-player-container {
   position: absolute;
   top: 15%;
-  right: 14%; /* Anchors to the right portion of the back-wall */
+  right: 25%; /* Anchors to the right portion of the back-wall */
   display: flex;
   flex-direction: row; /* Displays vinyl and side-panel side-by-side */
   align-items: center;
