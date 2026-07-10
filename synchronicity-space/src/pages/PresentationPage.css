@@ -64,8 +64,8 @@
 /* Restrict the container layout size */
 .landing-content .vinyl-section,
 .landing-content .vinyl-wrapper {
-  width: 200px;  /* Adjust as needed (e.g., down from 300px+) */
-  height: 200px;
+  width: 30vw;  /* Adjust as needed (e.g., down from 300px+) */
+  height: 30vw;
   display: flex;
   align-items: center;
   justify-content: center;
