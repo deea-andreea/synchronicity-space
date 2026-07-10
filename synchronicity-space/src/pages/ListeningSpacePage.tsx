@@ -122,7 +122,6 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       joinSession();
     }
 
-    // Auto-rejoin on disconnect/reconnect
     socket.off("connect", joinSession);
     socket.on("connect", joinSession);
 
@@ -156,7 +155,6 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       joinRoom();
     }
 
-    // Auto-rejoin on disconnect/reconnect
     socket.off("connect", joinRoom);
     socket.on("connect", joinRoom);
 
@@ -318,7 +316,6 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
 
   const [activeInvite, setActiveInvite] = useState<any>(null);
 
-  // Exiting sessions now fully closes state to prevent split-room desyncs
   const handleStopSession = () => {
     if (currentSessionId) {
       socket.emit("leave_session", currentSessionId);
@@ -465,24 +462,37 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
 
   const handleSuggestTrack = (album: any, trackIndex: number) => {
     if (!activeRoomId) return;
+    if (pollSuggestions.some(s => String(s.userId) === String(currentUser.id))) return;
 
-    const suggestion = {
-      userId: currentUser.id,
+    // Clean and sanitize the album object to remove any nested Sequelize circular instances
+    const sanitizedSuggestion = {
+      userId: String(currentUser.id),
       username: currentUser.username,
-      track: album.Tracks[trackIndex],
-      album,
+      track: {
+        id: album.Tracks[trackIndex].id,
+        title: album.Tracks[trackIndex].title
+      },
+      album: {
+        id: album.id,
+        title: album.title,
+        coverURL: album.coverURL,
+        Tracks: album.Tracks.map((t: any) => ({
+          id: t.id,
+          title: t.title
+        }))
+      },
       trackIndex
     };
 
-    socket.emit("add_suggestion", { roomId: activeRoomId, suggestion });
+    socket.emit("add_suggestion", { roomId: activeRoomId, suggestion: sanitizedSuggestion });
   };
 
   const handleVote = (suggestionUserId: string) => {
     if (!activeRoomId) return;
     socket.emit("toggle_vote", {
       roomId: activeRoomId,
-      userId: currentUser.id,
-      suggestionUserId
+      userId: String(currentUser.id),
+      suggestionUserId: String(suggestionUserId)
     });
   };
 
