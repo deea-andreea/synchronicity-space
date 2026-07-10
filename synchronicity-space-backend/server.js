@@ -15,7 +15,7 @@ import './src/models/Album.js';
 import './src/models/Track.js';
 import './src/models/Chat.js';
 
-// Fixed: Correct DNS IP configuration
+// Correct DNS Configuration
 dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 const PORT = process.env.PORT || 3000;
@@ -23,10 +23,8 @@ const PORT = process.env.PORT || 3000;
 let server;
 
 if (process.env.NODE_ENV === 'production') {
-  // Render handles the HTTPS/SSL decryption certificate automatically in the cloud.
   server = http.createServer(app);
 } else {
-  // Local development uses your self-signed .pem files
   const options = {
     key: fs.readFileSync('./key.pem'),
     cert: fs.readFileSync('./cert.pem'),
@@ -71,7 +69,6 @@ async function startServer() {
       socket.on("join_session", (sessionId, cb) => {
         socket.join(sessionId);
         console.log(`Socket ${socket.id} joined session ${sessionId}`);
-        // send current poll if exists
         if (roomPolls[sessionId]) {
           socket.emit("sync_poll", roomPolls[sessionId]);
         }
@@ -95,7 +92,7 @@ async function startServer() {
 
         const existingIndex = roomPolls[roomId].findIndex(s => String(s.userId) === String(suggestion.userId));
         if (existingIndex !== -1) {
-          // Replace their existing suggestion with the new track, reset votes for the new track
+          // Replace their existing suggestion with the new track, resetting votes
           roomPolls[roomId][existingIndex] = {
             userId: suggestion.userId,
             username: suggestion.username,
@@ -166,6 +163,23 @@ async function startServer() {
         });
       });
 
+      socket.on("send_spin_invite", ({ senderName, friendIds, sessionId, invitedFriends }) => {
+        console.log(`Spin Invite from ${senderName} to friends:`, friendIds);
+        friendIds.forEach((friendId) => {
+          const targetSocketId = userSocketMap[friendId];
+          if (targetSocketId) {
+            console.log(`Sending spin invite to friend ${friendId} at socket ${targetSocketId}`);
+            io.to(targetSocketId).emit("receive_spin_invite", {
+              sessionId: sessionId,
+              senderName: senderName,
+              invitedFriends: invitedFriends
+            });
+          } else {
+            console.log(`Friend ${friendId} is not online (no socket found for spin)`);
+          }
+        });
+      });
+
       socket.on("join_spin_presence", ({ spinId, userId, username }, cb) => {
         socket.join(spinId);
         console.log(`Socket ${socket.id} (User: ${username}/${userId}) joined spin presence room: ${spinId}`);
@@ -176,7 +190,6 @@ async function startServer() {
         }
         activeSpins[spinId][userId] = username;
         io.to(spinId).emit("spin_presence_update", Object.keys(activeSpins[spinId]));
-        // send current poll if exists
         if (roomPolls[spinId]) {
           socket.emit("sync_poll", roomPolls[spinId]);
         }
@@ -197,7 +210,6 @@ async function startServer() {
         socket.to(spinId).emit("receive_playback_sync", { album, trackIndex });
       });
 
-      // ------- Proximity Chat handling -------
       socket.on("request_nearby_chat", async ({ roomId, participants }) => {
         try {
           const Chat = (await import('./src/models/Chat.js')).default;
@@ -207,9 +219,7 @@ async function startServer() {
             chat = await Chat.create({ participants: sorted, messages: [] });
           }
           const payload = { chatId: String(chat._id), participants: sorted, messages: chat.messages || [] };
-          // Always reply to the requesting socket first
           socket.emit("chat_ready", payload);
-          // Also notify other participants who are online
           sorted.forEach(uid => {
             const targetSocket = userSocketMap[uid];
             if (targetSocket && targetSocket !== socket.id) {
@@ -227,7 +237,6 @@ async function startServer() {
           const msg = { senderId, senderName, text, createdAt: new Date() };
           const chat = await Chat.findByIdAndUpdate(chatId, { $push: { messages: msg } }, { new: true });
           if (chat) {
-            // Always echo to sender's socket
             socket.emit("receive_proximity_message", { chatId, msg });
             chat.participants.forEach(uid => {
               const targetSocket = userSocketMap[uid];

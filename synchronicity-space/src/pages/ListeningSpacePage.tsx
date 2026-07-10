@@ -118,12 +118,11 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       socket.emit("join_session", currentSessionId);
     };
 
-    // Join room immediately if already connected
     if (socket.connected) {
       joinSession();
     }
 
-    // Automatically re-join the room if the socket reconnects
+    // Auto-rejoin on disconnect/reconnect
     socket.off("connect", joinSession);
     socket.on("connect", joinSession);
 
@@ -131,12 +130,12 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       setMessages((prev) => [...prev, msg]);
     };
 
-    socket.off("receive_message");
+    socket.off("receive_message", onReceiveMessage);
     socket.on("receive_message", onReceiveMessage);
 
     return () => {
       socket.off("connect", joinSession);
-      socket.off("receive_message");
+      socket.off("receive_message", onReceiveMessage);
     };
   }, [isSessionActive, currentSessionId]);
 
@@ -153,12 +152,11 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       });
     };
 
-    // Join room immediately if already connected
     if (socket.connected) {
       joinRoom();
     }
 
-    // Automatically re-join the room if the socket reconnects
+    // Auto-rejoin on disconnect/reconnect
     socket.off("connect", joinRoom);
     socket.on("connect", joinRoom);
 
@@ -166,7 +164,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       setActiveSpinUsers(activeUsers);
     };
 
-    socket.off("spin_presence_update");
+    socket.off("spin_presence_update", onPresenceUpdate);
     socket.on("spin_presence_update", onPresenceUpdate);
 
     return () => {
@@ -174,7 +172,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
         socket.emit("leave_spin_presence", { spinId: currentSpinId, userId: currentUser.id });
       }
       socket.off("connect", joinRoom);
-      socket.off("spin_presence_update");
+      socket.off("spin_presence_update", onPresenceUpdate);
     };
   }, [isSpinActive, currentSpinId, currentUser?.id, currentUser?.username]);
 
@@ -205,13 +203,6 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       setPlayingAlbum(album);
       setCurrentTrackIndex(trackIndex);
     };
-
-    // Systematically prevent duplicate global event listeners
-    socket.off("avatar_moved");
-    socket.off("sync_poll");
-    socket.off("chat_ready");
-    socket.off("receive_proximity_message");
-    socket.off("receive_playback_sync");
 
     socket.on("avatar_moved", onAvatarMoved);
     socket.on("sync_poll", onSyncPoll);
@@ -296,9 +287,6 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       setSpinInvite(invite);
     };
 
-    socket.off("receive_invite");
-    socket.off("receive_spin_invite");
-
     socket.on("receive_invite", onReceiveInvite);
     socket.on("receive_spin_invite", onReceiveSpinInvite);
 
@@ -360,7 +348,6 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
   };
 
   const handleStartSession = () => {
-    // Gracefully exit any active spin first
     handleStopSpin();
 
     const sessionId = `session-${currentUser.id}`;
@@ -378,7 +365,6 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
   };
 
   const handleAcceptInvite = () => {
-    // Gracefully exit any active spin first
     handleStopSpin();
 
     const targetSessionId = activeInvite.sessionId;
@@ -394,7 +380,6 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
 
   // --- CO-SPIN WORKFLOW HANDLERS ---
   const handleStartSpin = () => {
-    // Gracefully exit any active chat session first
     handleStopSession();
 
     const sessionId = `spin-${currentUser.id}`;
@@ -420,7 +405,6 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
   };
 
   const handleAcceptSpinInvite = () => {
-    // Gracefully exit any active chat session first
     handleStopSession();
 
     const targetSessionId = spinInvite.sessionId;
@@ -465,11 +449,10 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
       }
       handlePlayAlbum(winner.album, winner.trackIndex);
 
-      // Clear poll universally across the correct active room
       setPollSuggestions([]);
       localStorage.removeItem('poll_suggestions');
       if (activeRoomId) {
-        socket.emit("sync_poll", { roomId: activeRoomId, suggestions: [] });
+        socket.emit("clear_poll", { roomId: activeRoomId });
       }
       return;
     }
@@ -482,43 +465,25 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
 
   const handleSuggestTrack = (album: any, trackIndex: number) => {
     if (!activeRoomId) return;
-    if (pollSuggestions.some(s => String(s.userId) === String(currentUser.id))) return;
 
-    const newSuggestion = {
+    const suggestion = {
       userId: currentUser.id,
       username: currentUser.username,
       track: album.Tracks[trackIndex],
       album,
-      trackIndex,
-      votes: []
+      trackIndex
     };
 
-    const merged = [...pollSuggestions, newSuggestion]
-      .sort((a, b) => b.votes.length - a.votes.length)
-      .slice(0, 10);
-
-    setPollSuggestions(merged);
-    localStorage.setItem('poll_suggestions', JSON.stringify(merged));
-    socket.emit("sync_poll", { roomId: activeRoomId, suggestions: merged });
+    socket.emit("add_suggestion", { roomId: activeRoomId, suggestion });
   };
 
   const handleVote = (suggestionUserId: string) => {
     if (!activeRoomId) return;
-
-    const newSuggestions = pollSuggestions.map(s => {
-      if (String(s.userId) === String(suggestionUserId)) {
-        if (!s.votes.includes(currentUser.id)) {
-          return { ...s, votes: [...s.votes, currentUser.id] };
-        } else {
-          return { ...s, votes: s.votes.filter(id => id !== currentUser.id) };
-        }
-      }
-      return s;
+    socket.emit("toggle_vote", {
+      roomId: activeRoomId,
+      userId: currentUser.id,
+      suggestionUserId
     });
-
-    setPollSuggestions(newSuggestions);
-    localStorage.setItem('poll_suggestions', JSON.stringify(newSuggestions));
-    socket.emit("sync_poll", { roomId: activeRoomId, suggestions: newSuggestions });
   };
 
   const handlePrevTrack = () => {
@@ -550,9 +515,12 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
   const quickPicks = albums.slice(0, 3);
   const hostId = currentSpinId.startsWith("spin-") ? currentSpinId.substring(5) : null;
 
+  // Type-Safe string-based presence tracking (fixes Object.keys vs integer database IDs)
+  const activeSpinUserIds = activeSpinUsers.map(String);
+
   const offlineFriends = invitedFriendsData.filter(friend => {
     if (String(friend.id) === String(currentUser.id)) return false;
-    return !activeSpinUsers.includes(friend.id);
+    return !activeSpinUserIds.includes(String(friend.id));
   });
 
   return (
@@ -701,7 +669,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
             <span className="badge">ACTIVE</span>
           </div>
 
-          {hostId && String(hostId) !== String(currentUser.id) && activeSpinUsers.includes(hostId) && (
+          {hostId && String(hostId) !== String(currentUser.id) && activeSpinUserIds.includes(String(hostId)) && (
             <div className="presence-card active">
               <div className="status-indicator"></div>
               <span className="username">{spinHostName}</span>
@@ -710,7 +678,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
           )}
 
           {invitedFriendsData
-            .filter(friend => String(friend.id) !== String(currentUser.id) && activeSpinUsers.includes(friend.id) && String(friend.id) !== String(hostId))
+            .filter(friend => String(friend.id) !== String(currentUser.id) && activeSpinUserIds.includes(String(friend.id)) && String(friend.id) !== String(hostId))
             .map(friend => (
               <div key={friend.id} className="presence-card active">
                 <div className="status-indicator"></div>
@@ -720,7 +688,7 @@ export default function ListeningSpacePage({ currentUser, albums = [] }: { curre
             ))
           }
 
-          {hostId && String(hostId) !== String(currentUser.id) && !activeSpinUsers.includes(hostId) && (
+          {hostId && String(hostId) !== String(currentUser.id) && !activeSpinUserIds.includes(String(hostId)) && (
             <div className="presence-card inactive">
               <div className="status-indicator"></div>
               <span className="username">{spinHostName}</span>
